@@ -1,6 +1,6 @@
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 from frozendict import frozendict
 from pydantic_settings import BaseSettings
@@ -68,7 +68,19 @@ class Folder(BaseModel):
         return values
 
 
-class Config(BaseSettings):
+class Paths(BaseModel):
+    project_folder: Path
+    corpus_db: Path
+
+    @model_validator(mode="before")
+    def resolve_paths(cls, values):
+        for k, v in values.items():
+            if k != "project_folder":
+                values[k] = values["project_folder"] / v
+        return values
+
+
+class CorpusConfig(BaseSettings):
     corpus_path: Optional[Path] = None
     included_extensions: set[str] = Field(default_factory=set)
     ignored_extensions: set[str] = Field(default_factory=set)
@@ -82,9 +94,6 @@ class Config(BaseSettings):
             LabelType.TEXT: self.text_labels,
             LabelType.META: self.meta_labels,
         }
-
-    def to_dict(self) -> dict[str, Any]:
-        return self.model_dump(mode="json")
 
     def get_doc_label(self, label_name: str, label_type: LabelType) -> DocLabel:
         """label_name is DocLabel.name attribute"""
@@ -106,6 +115,10 @@ class Config(BaseSettings):
             ]
         return meta_labels
 
-    class Config:
-        # Here we can specify any config for pydantic if needed, e.g., JSON parsing.
-        pass
+
+class Config(BaseSettings):
+    paths: Paths
+    corpus_config: CorpusConfig
+
+    def save(self, path: Path) -> None:
+        path.open("w").write(self.model_dump_json())

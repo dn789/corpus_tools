@@ -1,14 +1,15 @@
 from pathlib import Path
 
 from tqdm import tqdm
-import pandas as pd
 
-from backend.project.types import Config
+from backend.db.db import DatabaseManager
+from backend.project.config import CorpusConfig
 from backend.process_corpus.process_doc import (
     file_to_doc,
     get_doc_level_meta_values,
     get_sents_from_doc,
 )
+from backend.nlp_models.semantic import SemanticModel
 from backend.utils.nlp import SentTokenizer
 
 
@@ -18,8 +19,9 @@ class CorpusProcessor:
     associated text, meta categories, and subfolders.
     """
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: CorpusConfig, db: DatabaseManager) -> None:
         self.config = config
+        self.db = db
         self.corpus_path = config.corpus_path
         self.included_extensions = config.included_extensions
         self.ignored_extensions = config.ignored_extensions
@@ -46,12 +48,22 @@ class CorpusProcessor:
         self.sent_tokenizer = SentTokenizer()
 
     def process_files(self) -> None:
-        self.df_rows = []
+        # Process corpus
+        self.file_dicts = []
         for f in tqdm(list(self.corpus_path.rglob("*")), desc="Processing files"):  # type: ignore
             if f.is_file() and self.file_ext_filter(f):
                 self.process_file(f)
-        df = pd.DataFrame(self.df_rows)
-        self.df = df
+        # Add to database
+        self.db.setup()
+        for fd in self.file_dicts:
+            self.db.insert_file(fd)
+        # Add sentence embeddings
+        s_model = SemanticModel()
+        sents = self.db.get_all_sents(sents_only=True)
+        s_model.encode_sents(sents)  # type: ignore
+        self.db.add_embeddings(s_model.sent_embeds)  # type: ignore
+
+        self.db.close()
 
     def process_file(self, file_path: Path) -> None:
         doc = file_to_doc(file_path)
@@ -67,7 +79,12 @@ class CorpusProcessor:
         except ValueError as e:
             raise ValueError(f"{str(e)} {file_path}")
 
-        for sent_d in sent_dicts:
-            sent_d["filename"] = file_path  # type: ignore
-            sent_d["meta_properties"] = doc_level_meta_values  # type: ignore
-            self.df_rows.append(sent_d)
+        # Initialize embeddings to zero
+        for sd in sent_dicts:
+            sd["embedding"] = None  # type: ignore
+        file_d = {
+            "sent_dicts": sent_dicts,
+            "file_path": file_path,
+            "meta_properties": doc_level_meta_values,
+        }
+        self.file_dicts.append(file_d)

@@ -1,0 +1,13 @@
+{
+    "paths": {
+        "corpus_db": "corpus.db"
+    },
+    "corpus_config": {
+        "corpus_path": null,
+        "included_extensions": [],
+        "ignored_extensions": [],
+        "subfolders": {},
+        "text_labels": {},
+        "meta_labels": {}
+    }
+}

@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 
 from frozendict import frozendict
 
-from backend.project.types import DocLabel
+from backend.project.config import DocLabel
 from backend.utils.functions import flatten_lists
 from backend.utils.nlp import SentTokenizer
 
@@ -49,8 +49,8 @@ def xml_to_dict_inner(node: ET.Element) -> dict | list:
 def get_text_under_doc_labels(
     doc_section: Any,
     target_doc_labels: list[DocLabel],
-    target_parent_label_refs: set[frozendict] | None = None,
-) -> Generator[dict[str, str | set[frozendict]], None, None]:
+    target_parent_label_names: set[str] | None = None,
+) -> Generator[dict[str, str | set[str]], None, None]:
     """
     **Need to update
     See DocLabel.match_label documentation for how DocLabels correspond
@@ -91,42 +91,43 @@ def get_text_under_doc_labels(
         Generator[tuple[str | int | float, dict], None, None]: See example
             above.
     """
-    target_parent_label_refs = target_parent_label_refs or set()
+    target_parent_label_names = target_parent_label_names or set()
 
     if isinstance(doc_section, dict):
         for key, value in doc_section.items():
-            current_target_category_parents = set(target_parent_label_refs)
+            current_target_category_parents = set(target_parent_label_names)
             for doc_label in target_doc_labels:
                 if doc_label.match_label(key):
-                    current_target_category_parents.add(
-                        frozendict(type=doc_label.type, name=doc_label.name)
-                    )
+                    current_target_category_parents.add(doc_label.name)
 
             yield from get_text_under_doc_labels(
                 value,
                 target_doc_labels,
-                target_parent_label_refs=current_target_category_parents,
+                target_parent_label_names=current_target_category_parents,
             )
     elif isinstance(doc_section, list):
         for item in doc_section:
             yield from get_text_under_doc_labels(
                 item,
                 target_doc_labels,
-                target_parent_label_refs=target_parent_label_refs,
+                target_parent_label_names=target_parent_label_names,
             )
     else:
-        if target_parent_label_refs:
-            yield {"text": doc_section, "parent_label_refs": target_parent_label_refs}
+        if target_parent_label_names:
+            yield {
+                "text": doc_section,
+                "target_parent_label_names": target_parent_label_names,
+            }
 
 
 def sent_tokenize_label_text(
-    doc_label_text_iterator: Generator[dict[str, str | set[frozendict]], None, None],
+    doc_label_text_iterator: Generator[dict[str, str | set[str]], None, None],
     sent_tokenizer: SentTokenizer,
-) -> list[dict[str, str | int | set[frozendict]]]:
+) -> list[dict[str, str | int | set[str]]]:
     """
     Iterates over output of get_text_under_doc_labels and returns a list of
     dictionaries containing the tokenized sentences, label ref dictionaries
-    and the number of the section (the larger text content) each sentence came
+    and the number of the group (the larger text content) each sentence came
     from.
 
     Args:
@@ -136,13 +137,13 @@ def sent_tokenize_label_text(
         sent_tokenizer (SentTokenizer): Spacy sent tokenizer
 
     Returns:
-        list[dict[str, str | int | set[frozendict]]]: See above.
+        list[dict[str, str | int | set[str]]]: See above.
     """
     sents_with_refs = []
 
     for i, (d) in enumerate(doc_label_text_iterator):
         text = d["text"]
-        parent_label_refs = d["parent_label_refs"]
+        target_parent_label_names = d["target_parent_label_names"]
 
         if type(text) is list:
             text_list = flatten_lists(text)
@@ -159,8 +160,8 @@ def sent_tokenize_label_text(
                 sents_with_refs.append(
                     {
                         "sentence": sent,
-                        "section": i,
-                        "text_categories": parent_label_refs,
+                        "group_id": i,
+                        "text_categories": target_parent_label_names,
                     }
                 )
     return sents_with_refs
@@ -168,7 +169,7 @@ def sent_tokenize_label_text(
 
 def get_sents_from_doc(
     doc: dict | list, target_doc_labels: list[DocLabel], sent_tokenizer: SentTokenizer
-) -> list[dict[str, str | int | set[frozendict]]]:
+) -> list[dict[str, str | int | set[str]]]:
     """"""
     iterator = get_text_under_doc_labels(doc, target_doc_labels=target_doc_labels)
     sents_with_refs = sent_tokenize_label_text(iterator, sent_tokenizer)
