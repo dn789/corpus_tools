@@ -56,7 +56,17 @@ class Project:
         """label_name is DocLabel.name attribute"""
         return self.corpus_config.label_type_dict[label_type][label_name]
 
-    def process_corpus(self) -> None:
+    def load_db_manager(self, new_db: bool = False):
         self.db = DatabaseManager(self.config.paths.corpus_db)
+        if new_db:
+            self.db.setup()
+        else:
+            self.db.connect()
+
+    def load_corpus_processor(self, new_db: bool = False):
+        self.load_db_manager(new_db=new_db)
         self.corpus_processor = CorpusProcessor(self.corpus_config, self.db)
-        self.corpus_processor.process_files()
+
+    def process_corpus(self, add_embeddings: bool = True) -> None:
+        self.load_corpus_processor(new_db=True)
+        self.corpus_processor.process_files(add_embeddings=add_embeddings)

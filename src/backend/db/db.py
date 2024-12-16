@@ -28,13 +28,21 @@ class DatabaseManager:
                 sentence TEXT NOT NULL,
                 file_path TEXT NOT NULL,
                 embedding BLOB,
-                group_id INTEGER NOT NULL
+                group_id INTEGER
             )
         """)
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS text_categories (
                 sentence_id INTEGER,
                 name TEXT NOT NULL,
+                FOREIGN KEY (sentence_id) REFERENCES sentences(id)
+            )
+        """)
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS sent_tiers (
+                sentence_id INTEGER,
+                name TEXT,
+                tier TEXT,
                 FOREIGN KEY (sentence_id) REFERENCES sentences(id)
             )
         """)
@@ -49,6 +57,14 @@ class DatabaseManager:
             )
         """)
         self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS subfolders (
+            file_path TEXT NOT NULL,
+            subfolder TEXT NOT NULL,  
+            UNIQUE(file_path, subfolder) 
+        )
+        """)
+        # Add indices
+        self.cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_file_path ON sentences(file_path);
         """)
         self.cursor.execute("""
@@ -57,6 +73,10 @@ class DatabaseManager:
         self.cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_sentence_id_text_categories ON text_categories(sentence_id);
         """)
+        self.cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_sentence_id_sent_tiers ON sent_tiers(sentence_id);
+    """)
+
         self.connection.commit()
 
     def _make_query_strs(self):
@@ -69,9 +89,12 @@ class DatabaseManager:
     def _deserialize_embedding(self, embedding_blob: bytes) -> np.ndarray:
         return pickle.loads(embedding_blob)
 
-    def insert_file(self, entry: dict[str, Any]) -> None:
+    def insert_file_entry(self, entry: dict[str, Any]) -> None:
         for sd in entry["sent_dicts"]:
-            embedding_blob = self._serialize_embedding(sd["embedding"])
+            if sd.get("embedding"):
+                embedding_entry = self._serialize_embedding(sd["embedding"])
+            else:
+                embedding_entry = None
             self.cursor.execute(
                 """
             INSERT INTO sentences (sentence, file_path, embedding, group_id)
@@ -80,8 +103,8 @@ class DatabaseManager:
                 (
                     sd["sentence"],
                     str(entry["file_path"]),
-                    embedding_blob,
-                    sd["group_id"],
+                    embedding_entry,
+                    sd.get("group_id"),
                 ),
             )
 
@@ -95,43 +118,61 @@ class DatabaseManager:
                 """,
                     (sentence_id, name),
                 )
-            for property in entry["meta_properties"]:
-                parent_name = property.get("parent_name")
-                name = property["name"]
-                value = property["value"]
-
-                # If value is None, store as NULL in the database
-                if value is None:
-                    value = None
-                elif isinstance(value, (int, float, bool)):
-                    value = str(value)
-
-                if parent_name:
-                    parent_name_str = "= ?"
-                    params = parent_name, name, value
-                else:
-                    parent_name_str = "IS NULL"
-                    params = name, value
-
-                # Check if the meta_property for this file_path already exists
+            for name, tier in sd.get("sent_tiers", {}).items():
                 self.cursor.execute(
-                    f"""
-                    SELECT 1 FROM meta_properties WHERE file_path = ? AND parent_name {parent_name_str} AND name = ? AND value = ?
-                    """,
-                    # (str(entry["file_path"]), parent_name, name, value),
-                    (str(entry["file_path"]), *params),
+                    """
+                    INSERT INTO sent_tiers (sentence_id, name, tier)
+                    VALUES (?, ?, ?)
+                """,
+                    (sentence_id, name, tier),
                 )
-                existing_property = self.cursor.fetchone()
+        for property in entry["meta_properties"]:
+            parent_name = property.get("parent_name")
+            name = property["name"]
+            value = property["value"]
 
-                # Insert the meta_property if it does not exist already
-                if not existing_property:
-                    self.cursor.execute(
-                        """
-                        INSERT INTO meta_properties (file_path, parent_name, name, value)
-                        VALUES (?, ?, ?, ?)
-                        """,
-                        (str(entry["file_path"]), parent_name, name, value),
-                    )
+            # If value is None, store as NULL in the database
+            if value is None:
+                value = None
+            elif isinstance(value, (int, float, bool)):
+                value = str(value)
+
+            if parent_name:
+                parent_name_str = "= ?"
+                params = parent_name, name, value
+            else:
+                parent_name_str = "IS NULL"
+                params = name, value
+
+            # Check if the meta_property for this file_path already exists
+            self.cursor.execute(
+                f"""
+                SELECT 1 FROM meta_properties WHERE file_path = ? AND parent_name {parent_name_str} AND name = ? AND value = ?
+                """,
+                # (str(entry["file_path"]), parent_name, name, value),
+                (str(entry["file_path"]), *params),
+            )
+
+            existing_property = self.cursor.fetchone()
+
+            # Insert the meta_property if it does not exist already
+            if not existing_property:
+                self.cursor.execute(
+                    """
+                    INSERT INTO meta_properties (file_path, parent_name, name, value)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (str(entry["file_path"]), parent_name, name, value),
+                )
+
+        for subfolder in entry["subfolders"]:
+            self.cursor.execute(
+                """
+                    INSERT INTO subfolders (file_path, subfolder)
+                    VALUES (?, ?)
+                    """,
+                (str(entry["file_path"]), subfolder),
+            )
 
         self.connection.commit()
 
@@ -143,6 +184,30 @@ class DatabaseManager:
             (sentence_id,),
         )
         return [row[0] for row in self.cursor.fetchall()]
+
+    def _fetch_sent_tiers(self, sentence_id: int) -> dict[str, dict[str, str]]:
+        self.cursor.execute(
+            """
+            SELECT name, tier FROM sent_tiers WHERE sentence_id = ?
+            """,
+            (sentence_id,),
+        )
+        # Fetch all rows and return them as a list of dictionaries
+        return {row["name"]: row["tier"] for row in self.cursor.fetchall()}
+
+    def _fetch_sent_dict(
+        self, row: sqlite3.Row, include_embeddings: bool = False
+    ) -> dict[str, Any]:
+        sent_dict = {
+            "sentence": row["sentence"],
+            "file_path": Path(row["file_path"]),
+            "group_id": row["group_id"],
+            "text_categories": self._fetch_text_categories(row["id"]),
+            "sent_tiers": self._fetch_sent_tiers(row["id"]),
+        }
+        if include_embeddings and row["embedding"]:
+            sent_dict["embedding"] = self._deserialize_embedding(row["embedding"])
+        return sent_dict
 
     def _fetch_meta_properties(
         self, file_path_s: Path | list[Path]
@@ -179,6 +244,47 @@ class DatabaseManager:
                 for row in self.cursor.fetchall()
             ]
 
+    def get_sents_by_named_subfolder(
+        self,
+        subfolder: str | list[str],
+        include_embeddings: bool = False,
+        include_meta_properties: bool = True,
+    ) -> dict[str, Any]:
+        """
+        Same args and return type as get_sents_by_folder except subfolder arg
+        is a column value in subfolder table.
+        """
+        if isinstance(subfolder, str):
+            subfolder = [subfolder]  # Ensure subfolder is a list
+
+        # Prepare the query
+        placeholders = ",".join(["?"] * len(subfolder))
+        query = f"""
+            SELECT s.id, s.sentence, s.file_path, s.embedding, s.group_id
+            FROM sentences s
+            JOIN subfolders sf ON s.file_path = sf.file_path
+            WHERE sf.subfolder IN ({placeholders})
+        """
+        self.cursor.execute(query, tuple(subfolder))
+        rows = self.cursor.fetchall()
+
+        results = {"sent_dicts": []}
+        for row in rows:
+            sent_dict = self._fetch_sent_dict(
+                row, include_embeddings=include_embeddings
+            )
+
+            if include_embeddings and row["embedding"]:
+                sent_dict["embedding"] = self._deserialize_embedding(row["embedding"])
+
+            results["sent_dicts"].append(sent_dict)
+
+        if include_meta_properties:
+            file_paths = [row["file_path"] for row in rows]
+            results["meta_properties"] = self._fetch_meta_properties(file_paths)  # type: ignore
+
+        return results
+
     def get_sents_by_file_path(
         self,
         file_path: Path,
@@ -210,19 +316,14 @@ class DatabaseManager:
 
         results = {"sent_dicts": []}
         for row in rows:
-            sentence_data = {
-                "sentence": row["sentence"],
-                "file_path": Path(row["file_path"]),
-                "group_id": row["group_id"],
-                "text_categories": self._fetch_text_categories(row["id"]),
-            }
+            sent_dict = self._fetch_sent_dict(
+                row, include_embeddings=include_embeddings
+            )
 
             if include_embeddings and "embedding" in row:
-                sentence_data["embedding"] = self._deserialize_embedding(
-                    row["embedding"]
-                )
+                sent_dict["embedding"] = self._deserialize_embedding(row["embedding"])
 
-            results["sent_dicts"].append(sentence_data)
+            results["sent_dicts"].append(sent_dict)
 
         if include_meta_properties:
             meta_properties = self._fetch_meta_properties(file_path)
@@ -258,12 +359,9 @@ class DatabaseManager:
 
         results = {"sent_dicts": []}
         for row in rows:
-            sent_dict = {
-                "sentence": row["sentence"],
-                "file_path": Path(row["file_path"]),
-                "group_id": row["group_id"],
-                "text_categories": self._fetch_text_categories(row["id"]),
-            }
+            sent_dict = self._fetch_sent_dict(
+                row, include_embeddings=include_embeddings
+            )
 
             if include_embeddings and row["embedding"]:
                 sent_dict["embedding"] = self._deserialize_embedding(row["embedding"])
@@ -307,18 +405,14 @@ class DatabaseManager:
 
         results = {"sent_dicts": []}
         for row in rows:
-            sentence_data = {
-                "sentence": row["sentence"],
-                "file_path": Path(row["file_path"]),
-                "group_id": row["group_id"],
-            }
+            sent_dict = self._fetch_sent_dict(
+                row, include_embeddings=include_embeddings
+            )
 
             if include_embeddings and "embedding" in row:
-                sentence_data["embedding"] = self._deserialize_embedding(
-                    row["embedding"]
-                )
+                sent_dict["embedding"] = self._deserialize_embedding(row["embedding"])
 
-            results["sent_dicts"].append(sentence_data)
+            results["sent_dicts"].append(sent_dict)
 
         if include_meta_properties:
             results["meta_properties"] = self._fetch_meta_properties(file_paths)  # type: ignore
@@ -390,17 +484,12 @@ class DatabaseManager:
         results = {"sent_dicts": []}
 
         for row in rows:
-            sent_dict = {
-                "sentence": row["sentence"],
-                "file_path": Path(row["file_path"]),
-                "group_id": row["group_id"],
-                "text_categories": self._fetch_text_categories(row["id"]),
-            }
+            sent_dict = self._fetch_sent_dict(
+                row, include_embeddings=include_embeddings
+            )
 
             if include_embeddings and "embedding" in row:
                 sent_dict["embedding"] = self._deserialize_embedding(row["embedding"])
-
-            # sentence_data["meta_properties"] = meta_properties[str(row["file_path"])]
 
             results["sent_dicts"].append(sent_dict)
 
@@ -437,19 +526,14 @@ class DatabaseManager:
             results["meta_properties"] = self._fetch_meta_properties(file_paths)  # type: ignore
 
         for row in rows:
-            sentence_data = {
-                "sentence": row["sentence"],
-                "file_path": Path(row["file_path"]),
-                "group_id": row["group_id"],
-                "text_categories": self._fetch_text_categories(row["id"]),
-            }
+            sent_dict = self._fetch_sent_dict(
+                row, include_embeddings=include_embeddings
+            )
 
             if include_embeddings and row["embedding"]:
-                sentence_data["embedding"] = self._deserialize_embedding(
-                    row["embedding"]
-                )
+                sent_dict["embedding"] = self._deserialize_embedding(row["embedding"])
 
-            results["sent_dicts"].append(sentence_data)
+            results["sent_dicts"].append(sent_dict)
 
         return results
 

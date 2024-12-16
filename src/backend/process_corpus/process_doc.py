@@ -225,7 +225,7 @@ def get_keys_or_values_for_doc_labels(
     )
 
 
-def get_doc_level_meta_values(
+def get_doc_level_meta_props(
     doc: dict | list, target_doc_labels: list[DocLabel]
 ) -> list[dict[str, Any]]:
     """
@@ -242,7 +242,7 @@ def get_doc_level_meta_values(
         doc, target_doc_labels
     )
 
-    meta_values = []
+    meta_props = []
 
     # Keep track of added values from attribute-type meta values.
     # (They can occur in multiple nodes, so you need to make sure
@@ -264,10 +264,10 @@ def get_doc_level_meta_values(
                     "name": value_name,
                     "value": value,
                 }
-                meta_values.append(meta_value_dict)
+                meta_props.append(meta_value_dict)
 
         else:
             meta_value_dict = {"name": doc_label.name, "value": value}
-            meta_values.append(meta_value_dict)
+            meta_props.append(meta_value_dict)
 
-    return meta_values
+    return meta_props

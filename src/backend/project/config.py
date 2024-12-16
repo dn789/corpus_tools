@@ -59,12 +59,12 @@ class DocLabel(BaseModel):
 
 class Folder(BaseModel):
     color: str
-    value: Path
+    path: Path
     display_name: Optional[str] = None
 
-    @model_validator(mode="before")
+    @model_validator(mode="after")
     def set_display_name(cls, values):
-        values["display_name"] = values["value"].name
+        values.display_name = values.path.name
         return values
 
 
@@ -114,6 +114,13 @@ class CorpusConfig(BaseSettings):
                 label for label in meta_labels if label.file_type == file_type
             ]
         return meta_labels
+
+    def get_subfolder_names_for_path(self, path: Path) -> list[str]:
+        subfolder_names = []
+        for folder in self.subfolders.values():
+            if folder.path in path.parents:
+                subfolder_names.append(folder.display_name)
+        return subfolder_names
 
 
 class Config(BaseSettings):
