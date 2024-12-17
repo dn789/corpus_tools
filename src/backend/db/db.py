@@ -16,7 +16,7 @@ class DatabaseManager:
         self._make_tables()
 
     def connect(self) -> None:
-        self._make_query_strs()
+        # self._make_query_strs()
         self.connection = sqlite3.connect(self.db_path)
         self.connection.row_factory = sqlite3.Row
         self.cursor = self.connection.cursor()
@@ -49,11 +49,10 @@ class DatabaseManager:
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS meta_properties (
                 file_path TEXT NOT NULL,
-                parent_name TEXT,
                 name TEXT NOT NULL,
                 value TEXT,
-                UNIQUE(file_path, parent_name, name),
-                PRIMARY KEY (file_path, parent_name, name)
+                UNIQUE(file_path,  name),
+                PRIMARY KEY (file_path,  name)
             )
         """)
         self.cursor.execute("""
@@ -78,10 +77,6 @@ class DatabaseManager:
     """)
 
         self.connection.commit()
-
-    def _make_query_strs(self):
-        self.meta_query_str = """SELECT parent_name, name, value
-            FROM meta_properties"""
 
     def _serialize_embedding(self, embedding: np.ndarray) -> bytes:
         return pickle.dumps(embedding)
@@ -127,7 +122,6 @@ class DatabaseManager:
                     (sentence_id, name, tier),
                 )
         for property in entry["meta_properties"]:
-            parent_name = property.get("parent_name")
             name = property["name"]
             value = property["value"]
 
@@ -137,19 +131,13 @@ class DatabaseManager:
             elif isinstance(value, (int, float, bool)):
                 value = str(value)
 
-            if parent_name:
-                parent_name_str = "= ?"
-                params = parent_name, name, value
-            else:
-                parent_name_str = "IS NULL"
-                params = name, value
+            params = name, value
 
             # Check if the meta_property for this file_path already exists
             self.cursor.execute(
-                f"""
-                SELECT 1 FROM meta_properties WHERE file_path = ? AND parent_name {parent_name_str} AND name = ? AND value = ?
+                """
+                SELECT 1 FROM meta_properties WHERE file_path = ?  AND name = ? AND value = ?
                 """,
-                # (str(entry["file_path"]), parent_name, name, value),
                 (str(entry["file_path"]), *params),
             )
 
@@ -159,10 +147,10 @@ class DatabaseManager:
             if not existing_property:
                 self.cursor.execute(
                     """
-                    INSERT INTO meta_properties (file_path, parent_name, name, value)
-                    VALUES (?, ?, ?, ?)
+                    INSERT INTO meta_properties (file_path, name, value)
+                    VALUES (?, ?, ?)
                     """,
-                    (str(entry["file_path"]), parent_name, name, value),
+                    (str(entry["file_path"]), name, value),
                 )
 
         for subfolder in entry["subfolders"]:
@@ -212,11 +200,11 @@ class DatabaseManager:
     def _fetch_meta_properties(
         self, file_path_s: Path | list[Path]
     ) -> list[dict[str, Any]] | dict[str, Any]:
-        if type(file_path_s) is list:
+        if type(file_path_s) is set:
             meta_properties = {}
             self.cursor.execute(
                 f"""
-                SELECT file_path, parent_name, name, value
+                SELECT file_path, name, value
                 FROM meta_properties
                 WHERE file_path IN ({','.join(['?'] * len(file_path_s))})
                 """,
@@ -235,14 +223,11 @@ class DatabaseManager:
             file_path = file_path_s
             self.cursor.execute(
                 """
-                SELECT parent_name, name, value FROM meta_properties WHERE file_path = ?
+                SELECT  name, value FROM meta_properties WHERE file_path = ?
                 """,
                 (str(file_path),),
             )
-            return [
-                {"parent_name": row[0], "name": row[1], "value": row[2]}
-                for row in self.cursor.fetchall()
-            ]
+            return [{"name": row[0], "value": row[1]} for row in self.cursor.fetchall()]
 
     def get_sents_by_named_subfolder(
         self,
@@ -280,7 +265,7 @@ class DatabaseManager:
             results["sent_dicts"].append(sent_dict)
 
         if include_meta_properties:
-            file_paths = [row["file_path"] for row in rows]
+            file_paths = {row["file_path"] for row in rows}
             results["meta_properties"] = self._fetch_meta_properties(file_paths)  # type: ignore
 
         return results
@@ -401,7 +386,7 @@ class DatabaseManager:
         self.cursor.execute(sql_query, tuple(query_params))
         rows = self.cursor.fetchall()
 
-        file_paths = [row["file_path"] for row in rows]
+        file_paths = {row["file_path"] for row in rows}
 
         results = {"sent_dicts": []}
         for row in rows:
@@ -422,7 +407,6 @@ class DatabaseManager:
     def get_sents_by_meta_property(
         self,
         name: str,
-        parent_name: str | None = None,
         value: Any | None = None,
         value_range: tuple | None = None,
         multiple_values: list[Any] | None = None,
@@ -435,7 +419,6 @@ class DatabaseManager:
 
         Args:
             name (str):
-            parent_name (str | None, optional): Defaults to None.
             value (Any | None, optional): Defaults to None.
             value_range (tuple | None, optional): Min and max values. Defaults
                 to None.
@@ -454,16 +437,9 @@ class DatabaseManager:
         """
         query_params = [name]
 
-        if parent_name is not None:
-            query += " AND l.parent_name = ?"
-            query_params.append(parent_name)
-        else:
-            query += " AND l.parent_name IS NULL"
-
         # Handle value range for numeric labels
         if value_range:
             query += " AND CAST(l.value AS REAL) BETWEEN ? AND ?"
-            print(query)
             query_params.extend(value_range)
         elif multiple_values:
             query += f" AND l.value IN ({','.join(['?']*len(multiple_values))})"
@@ -522,7 +498,7 @@ class DatabaseManager:
             return [row["sentence"] for row in rows]
 
         if include_meta_properties:
-            file_paths = [row["file_path"] for row in rows]
+            file_paths = {row["file_path"] for row in rows}
             results["meta_properties"] = self._fetch_meta_properties(file_paths)  # type: ignore
 
         for row in rows:

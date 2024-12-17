@@ -40,15 +40,13 @@ def flatten_participants(
 ) -> list[dict[str, str]]:
     flattened = []
     for p_name, p_d in participants.items():
-        parent_name = f"Participants.{p_name}"
         for p_k, p_v in p_d.items():
             if p_v:
                 # Temporary fix
                 if isinstance(p_v, (list, set)):
                     p_v = str(p_v)
-                flattened.append(
-                    {"parent_name": parent_name, "name": p_k, "value": p_v}
-                )
+                name = f"Participants.{p_name}-{p_k}"
+                flattened.append({"name": name, "value": p_v})
     return flattened
 
 

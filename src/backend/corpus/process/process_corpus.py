@@ -3,9 +3,9 @@ from pathlib import Path
 from tqdm import tqdm
 
 from backend.db.db import DatabaseManager
-from backend.process_corpus.process_cha import process_cha_file
+from backend.corpus.process.process_cha import process_cha_file
 from backend.project.config import CorpusConfig
-from backend.process_corpus.process_doc import (
+from backend.corpus.process.process_doc import (
     file_to_doc,
     get_doc_level_meta_props,
     get_sents_from_doc,

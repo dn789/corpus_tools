@@ -1,6 +1,7 @@
 1. Clean up db.py a little bit maybe?
 2. Fix documentation in process_doc.py
 3. Integrate apache tika?
+4. More elegant way of getting meta_label from meta_prop_ref
 
 ## Corpus processing
 

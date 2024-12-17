@@ -3,9 +3,16 @@ from pathlib import Path
 
 import shutil
 
+from backend.corpus.corpus import Corpus
 from backend.db.db import DatabaseManager
-from backend.process_corpus.process_corpus import CorpusProcessor
+from backend.corpus.process.process_corpus import CorpusProcessor
 from backend.project.config import Config, DocLabel, LabelType
+
+
+class Paths:
+    def __init__(self, project_folder: Path):
+        self.project_folder = project_folder
+        self.corpus_db = project_folder / "corpus.db"
 
 
 class Project:
@@ -16,6 +23,7 @@ class Project:
     ) -> None:
         self.default_config_path = default_config_path
         self.project_folder = project_folder
+        self.paths = Paths(self.project_folder)
         self.load_project()
 
     def load_project(self) -> None:
@@ -29,7 +37,6 @@ class Project:
             shutil.copy(self.default_config_path, self.config_path)
 
         config_d = json.load(self.config_path.open())
-        config_d["paths"]["project_folder"] = self.project_folder
         self.config = Config.model_validate(config_d)
         self.corpus_config = self.config.corpus_config
 
@@ -57,7 +64,7 @@ class Project:
         return self.corpus_config.label_type_dict[label_type][label_name]
 
     def load_db_manager(self, new_db: bool = False):
-        self.db = DatabaseManager(self.config.paths.corpus_db)
+        self.db = DatabaseManager(self.paths.corpus_db)
         if new_db:
             self.db.setup()
         else:
@@ -70,3 +77,4 @@ class Project:
     def process_corpus(self, add_embeddings: bool = True) -> None:
         self.load_corpus_processor(new_db=True)
         self.corpus_processor.process_files(add_embeddings=add_embeddings)
+        self.corpus = Corpus(self.db, self.corpus_config, get_features=True)

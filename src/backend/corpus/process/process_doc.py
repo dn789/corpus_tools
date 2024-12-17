@@ -190,13 +190,13 @@ def get_keys_or_values_for_doc_labels_inner(
                     if not doc_label.value_in_attrs and doc_label in [
                         doc_label for value, doc_label in values_and_doc_labels
                     ]:
-                        error_str = f'Multiple instances of document-level label "{doc_label.display_name}" found in '
+                        error_str = f'Multiple instances of document-level label "{doc_label.name}" found in '
                         raise ValueError(error_str)
                     if doc_label.value_in_attrs:
                         values_and_doc_labels.append((key, doc_label))
                     else:
                         if not isinstance(value, (str, int, float, bool, NoneType)):
-                            error_str = f'Incompatible value "{value}" found for document-level label "{doc_label.display_name}" in '
+                            error_str = f'Incompatible value "{value}" found for document-level label "{doc_label.name}" in '
                             raise ValueError(error_str)
                         values_and_doc_labels.append((value, doc_label))
 
@@ -247,21 +247,20 @@ def get_doc_level_meta_props(
     # Keep track of added values from attribute-type meta values.
     # (They can occur in multiple nodes, so you need to make sure
     # no atrributes are repeated)
-    added_value_full_names = set()
+    added_attr_type_meta_value_names = set()
 
     for value, doc_label in raw_values_and_doc_labels:
         if doc_label.value_in_attrs:
             attrs = dict(value)  # type: ignore
             attrs.pop("_tag")  # type: ignore
             for value_name, value in attrs.items():
-                full_name = (doc_label.name, value_name)
-                if full_name in added_value_full_names:
-                    error_str = f'Multiple values for attribute "{value_name}" found for document-level meta label "{doc_label.display_name}" in '
+                name = f"{doc_label.name}-{value_name}"
+                if name in added_attr_type_meta_value_names:
+                    error_str = f'Multiple values for attribute "{value_name}" found for document-level meta label "{doc_label.name}" in '
                     raise ValueError(error_str)
-                added_value_full_names.add(full_name)
+                added_attr_type_meta_value_names.add(name)
                 meta_value_dict = {
-                    "parent_name": doc_label.name,
-                    "name": value_name,
+                    "name": name,
                     "value": value,
                 }
                 meta_props.append(meta_value_dict)
