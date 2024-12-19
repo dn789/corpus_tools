@@ -30,7 +30,7 @@ def process_cha_file(file_path: Path) -> dict[str, Any]:
             # Temporary fix
             if isinstance(h_d, (list, set)):
                 h_d = str(h_d)
-            meta_properties.append({"name": h_name, "value": h_d})
+            meta_properties.append({"label_name": h_name, "name": h_name, "value": h_d})
     file_d["meta_properties"] = meta_properties  # type: ignore
     return file_d
 
@@ -42,11 +42,12 @@ def flatten_participants(
     for p_name, p_d in participants.items():
         for p_k, p_v in p_d.items():
             if p_v:
-                # Temporary fix
                 if isinstance(p_v, (list, set)):
                     p_v = str(p_v)
-                name = f"Participants.{p_name}-{p_k}"
-                flattened.append({"name": name, "value": p_v})
+                name = f"{p_name}-{p_k}"
+                flattened.append(
+                    {"label_name": "Participants", "name": name, "value": p_v}
+                )
     return flattened
 
 

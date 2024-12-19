@@ -1,7 +1,9 @@
 from pathlib import Path
+from typing import Any
 
 from tqdm import tqdm
 
+from backend.corpus.features import MetaType
 from backend.db.db import DatabaseManager
 from backend.corpus.process.process_cha import process_cha_file
 from backend.project.config import CorpusConfig
@@ -11,6 +13,7 @@ from backend.corpus.process.process_doc import (
     get_sents_from_doc,
 )
 from backend.nlp_models.semantic import SemanticModel
+from backend.utils.functions import is_quant
 from backend.utils.nlp import SentTokenizer
 
 
@@ -43,7 +46,6 @@ class CorpusProcessor:
                 return f.suffix not in self.included_extensions
         else:
             raise ValueError("Must specify either included or ignored extensions.")
-
         self.file_ext_filter = file_ext_filter
 
         self.sent_tokenizer = SentTokenizer()
@@ -55,6 +57,8 @@ class CorpusProcessor:
 
         if add_embeddings:
             self.add_embeddings()
+
+        self.set_meta_prop_value_attrs()
         self.db.close()
 
     def process_file(self, file_path: Path) -> None:
@@ -70,17 +74,24 @@ class CorpusProcessor:
                     self.config.get_text_labels(file_type=file_type),
                     self.sent_tokenizer,
                 )
-                meta_properties = get_doc_level_meta_props(
+                meta_prop_refs = get_doc_level_meta_props(
                     doc, self.config.get_meta_labels(file_type=file_type)
                 )
+
             except ValueError as e:
                 raise ValueError(f"{str(e)} {file_path}")
 
             file_d = {
                 "sent_dicts": sent_dicts,
                 "file_path": file_path,
-                "meta_properties": meta_properties,
+                "meta_properties": meta_prop_refs,
             }
+
+        for meta_prop_ref in file_d["meta_properties"]:
+            label_name = meta_prop_ref["label_name"]
+            name = meta_prop_ref["name"]
+            if not self.config.meta_properties.get(label_name, {}).get(name):
+                self.config.add_meta_property(meta_prop_ref)
 
         if file_d.get("error"):
             # Log errors here.
@@ -94,3 +105,59 @@ class CorpusProcessor:
         sents = self.db.get_all_sents(sents_only=True)
         s_model.encode_sents(sents)  # type: ignore
         self.db.add_embeddings(s_model.sent_embeds)  # type: ignore
+
+    def get_meta_prop_value_info(self, values: list[Any]) -> dict[str, Any]:
+        """
+        Returns a dict of {
+            "meta_type" : MetaType.QUANTITATIVE or MetaType.CATEGORICAL,
+            "min": minimum value (if QUANTITATIVE) or None,
+            "max": maximum value (if QUANTITATIVE) or None,
+            "cat_values": all values (if categorical) or None
+        }
+
+        """
+        if any(not isinstance(value, (int, float, str)) for value in values):
+            raise ValueError("Incompatible Meta property value")
+
+        quant_count = len([value for value in values if is_quant(value)])
+        if quant_count / len(values) > 0.75:
+            meta_type = MetaType.QUANTITATIVE
+        else:
+            meta_type = MetaType.CATEGORICAL
+
+        if meta_type == MetaType.QUANTITATIVE:
+            min_, max_ = min(values), max(values)
+            cat_values = None
+
+        else:
+            min_, max_ = None, None
+            cat_values = values
+
+        return {
+            "meta_type": meta_type,
+            "min": min_,
+            "max": max_,
+            "cat_values": cat_values,
+        }
+
+    def set_meta_prop_value_attrs(self) -> None:
+        meta_prop_values = {}
+        results = self.db.get_all_sents()
+        for filename, meta_prop_refs in results["meta_properties"].items():  # type: ignore
+            for meta_prop_ref in meta_prop_refs:
+                label_name = meta_prop_ref["label_name"]
+                name = meta_prop_ref["name"]
+                value = meta_prop_ref["value"]
+                meta_prop_values.setdefault((label_name, name), set())
+                meta_prop_values[(label_name, name)].add(value)
+
+        for (label_name, name), values in meta_prop_values.items():
+            value_info = self.get_meta_prop_value_info(values)
+            meta_prop = self.config.meta_properties[label_name][name]
+            if meta_prop.type != value_info["meta_type"]:
+                # Handle discrepancy here, for now just overrwite meta_type
+                pass
+            meta_prop.type = value_info["meta_type"]
+            meta_prop.min = value_info["min"]
+            meta_prop.max = value_info["max"]
+            meta_prop.cat_values = value_info["cat_values"]

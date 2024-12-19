@@ -10,7 +10,7 @@ from pydantic import BaseModel, model_validator
 
 
 class MetaType(str, Enum):
-    NUMERICAL = "NUMERICAL"
+    QUANTITATIVE = "QUANTITATIVE"
     CATEGORICAL = "CATEGORICAL"
 
 
@@ -76,15 +76,16 @@ class DocLabel(BaseModel):
 
 
 class TextCategory(BaseModel):
-    # Same name as corresponding DocLabel
+    # Same as corresponding DocLabel
     name: str
 
 
 class MetaProperty(BaseModel):
+    # name or name[0] same as corresponding DocLabel
     name: str
     label_name: Optional[str] = None
     type: Optional[MetaType] = None
-    # For numerical types
+    # For QUANTITATIVE types
     min: Any = 0
     max: Any = 0
     # For categorical types

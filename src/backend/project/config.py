@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic_settings import BaseSettings
 from pydantic import Field
@@ -9,8 +9,10 @@ from backend.corpus.features import (
     Folder,
     LabelType,
     MetaProperty,
+    MetaType,
     TextCategory,
 )
+from backend.utils.functions import is_quant
 
 
 class CorpusConfig(BaseSettings):
@@ -21,7 +23,7 @@ class CorpusConfig(BaseSettings):
     text_labels: dict[str, DocLabel] = Field(default_factory=dict)
     meta_labels: dict[str, DocLabel] = Field(default_factory=dict)
     text_categories: dict[str, TextCategory] = Field(default_factory=dict)
-    meta_properties: dict[str, MetaProperty] = Field(default_factory=dict)
+    meta_properties: dict[str, dict[str, MetaProperty]] = Field(default_factory=dict)
 
     @property
     def label_type_dict(self) -> dict:
@@ -56,6 +58,18 @@ class CorpusConfig(BaseSettings):
             if folder.path in path.parents:
                 subfolder_names.append(folder.display_name)
         return subfolder_names
+
+    def add_meta_property(self, meta_pro_ref: dict[str, Any]):
+        label_name = meta_pro_ref["label_name"]
+        name = meta_pro_ref["name"]
+        value = meta_pro_ref["value"]
+        meta_type = MetaType.QUANTITATIVE if is_quant(value) else MetaType.CATEGORICAL
+        self.meta_properties.setdefault(label_name, {})
+        self.meta_properties[label_name][name] = MetaProperty(
+            name=name,
+            label_name=label_name,
+            type=meta_type,  # type: ignore
+        )
 
 
 class Config(BaseSettings):

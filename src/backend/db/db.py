@@ -49,6 +49,7 @@ class DatabaseManager:
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS meta_properties (
                 file_path TEXT NOT NULL,
+                label_name TEXT NOT NULL,
                 name TEXT NOT NULL,
                 value TEXT,
                 UNIQUE(file_path,  name),
@@ -122,6 +123,7 @@ class DatabaseManager:
                     (sentence_id, name, tier),
                 )
         for property in entry["meta_properties"]:
+            label_name = property["label_name"]
             name = property["name"]
             value = property["value"]
 
@@ -131,12 +133,12 @@ class DatabaseManager:
             elif isinstance(value, (int, float, bool)):
                 value = str(value)
 
-            params = name, value
+            params = label_name, name, value
 
             # Check if the meta_property for this file_path already exists
             self.cursor.execute(
                 """
-                SELECT 1 FROM meta_properties WHERE file_path = ?  AND name = ? AND value = ?
+                SELECT 1 FROM meta_properties WHERE file_path = ? AND label_name = ? AND name = ? AND value = ?
                 """,
                 (str(entry["file_path"]), *params),
             )
@@ -147,10 +149,10 @@ class DatabaseManager:
             if not existing_property:
                 self.cursor.execute(
                     """
-                    INSERT INTO meta_properties (file_path, name, value)
-                    VALUES (?, ?, ?)
+                    INSERT INTO meta_properties (file_path, label_name, name, value)
+                    VALUES (?, ?, ?, ?)
                     """,
-                    (str(entry["file_path"]), name, value),
+                    (str(entry["file_path"]), label_name, name, value),
                 )
 
         for subfolder in entry["subfolders"]:
@@ -204,7 +206,7 @@ class DatabaseManager:
             meta_properties = {}
             self.cursor.execute(
                 f"""
-                SELECT file_path, name, value
+                SELECT file_path, label_name, name, value
                 FROM meta_properties
                 WHERE file_path IN ({','.join(['?'] * len(file_path_s))})
                 """,
@@ -214,8 +216,7 @@ class DatabaseManager:
             for row in self.cursor.fetchall():
                 file_path = row["file_path"]
                 meta_properties.setdefault(file_path, [])
-                meta_prop = {**row}
-                meta_prop.pop("file_path")
+                meta_prop = self.pack_meta_props(row)
                 meta_properties[file_path].append(meta_prop)
             return meta_properties
 
@@ -223,11 +224,21 @@ class DatabaseManager:
             file_path = file_path_s
             self.cursor.execute(
                 """
-                SELECT  name, value FROM meta_properties WHERE file_path = ?
+                SELECT  label_name, name, value FROM meta_properties WHERE file_path = ?
                 """,
                 (str(file_path),),
             )
-            return [{"name": row[0], "value": row[1]} for row in self.cursor.fetchall()]
+            meta_properties = []
+            for row in self.cursor.fetchall():
+                meta_properties.append(self.pack_meta_props(row))
+            return meta_properties
+
+    def pack_meta_props(self, row: sqlite3.Row) -> dict[str, Any]:
+        return {
+            "label_name": row["label_name"],
+            "name": row["name"],
+            "value": row["value"],
+        }
 
     def get_sents_by_named_subfolder(
         self,
@@ -406,6 +417,7 @@ class DatabaseManager:
 
     def get_sents_by_meta_property(
         self,
+        label_name: str,
         name: str,
         value: Any | None = None,
         value_range: tuple | None = None,
@@ -433,9 +445,9 @@ class DatabaseManager:
             SELECT s.id, s.sentence, s.file_path, s.embedding, s.group_id
             FROM sentences s
             JOIN meta_properties l ON s.file_path = l.file_path
-            WHERE l.name = ?
+            WHERE l.label_name = ? AND l.name = ?
         """
-        query_params = [name]
+        query_params = [label_name, name]
 
         # Handle value range for numeric labels
         if value_range:

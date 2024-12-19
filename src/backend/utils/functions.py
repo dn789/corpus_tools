@@ -1,5 +1,5 @@
+from datetime import date
 from typing import Any
-from backend.corpus.features import MetaType
 
 
 def flatten_lists(nested_list: list):
@@ -37,25 +37,11 @@ def flatten_dict(d, parent_key="", sep="."):
     return flattened
 
 
-def get_meta_prop_value_info(values: list[Any]) -> dict[str, Any]:
-    """
-    Returns a dict of {
-        "meta_type" : MetaType.NUMERICAL or MetaType.CATEGORICAL,
-        "min": minimum value (if numerical) or None,
-        "max": maximum value (if numerical) or None,
-        "cat_values": all values (if categorical) or None
-    }
-
-    """
-    if any(not isinstance(value, (int, float, str)) for value in values):
-        raise ValueError("Incompatible Meta property value")
-    if any(any(char.isalpha() for char in value) for value in values):
-        meta_type = MetaType.CATEGORICAL
-        min_, max_ = None, None
-        cat_values = values
+def is_quant(item: Any) -> bool:
+    """Determines if item is a quantitative value. Need to update."""
+    if isinstance(item, (int, float, date)):
+        return True
+    elif type(item) is str:
+        return not any(char.isalpha() for char in item)
     else:
-        meta_type = MetaType.NUMERICAL
-        min_, max_ = min(values), max(values)
-        cat_values = None
-
-    return {"meta_type": meta_type, "min": min_, "max": max_, "cat_values": cat_values}
+        raise ValueError("Incompatible meta property value")

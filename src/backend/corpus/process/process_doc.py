@@ -12,7 +12,7 @@ from backend.utils.nlp import SentTokenizer
 
 
 def file_to_doc(file_path: Path) -> dict | list:
-    """Converts files to a dictionary/list representation for further processing."""
+    """Converts files to a dictionary/list representation."""
     ext = file_path.suffix
     if ext == ".json":
         return json.load(file_path.open())
@@ -46,19 +46,18 @@ def xml_to_dict_inner(node: ET.Element) -> dict | list:
         return {current_node: node_text}
 
 
-def get_text_under_doc_labels(
+def get_content_under_doc_labels(
     doc_section: Any,
     target_doc_labels: list[DocLabel],
     target_parent_label_names: set[str] | None = None,
-) -> Generator[dict[str, str | set[str]], None, None]:
+) -> Generator[dict[str, Any | set[str]], None, None]:
     """
-    **Need to update
-    See DocLabel.match_label documentation for how DocLabels correspond
-    to keys in doc_section.
+    (See DocLabel.match_label documentation for how DocLabels correspond
+    to keys in doc_section.)
 
     Iterator of:
         - terminal content under keys corresponding to provided DocLabels
-        - set of dicts referencing those ancestor keys/DocLabels
+        - names of those ancestor keys/DocLabels
 
     Example:
 
@@ -75,17 +74,16 @@ def get_text_under_doc_labels(
     target_doc_labels = [<DocLabel for "label_1">, <DocLabel for "label_2">]
 
     Yields:
-        ("string1", {<dict reference to "label_1">, <dict reference to "label_2">})
-        ("string2", {<dict reference to "label_1">, <dict reference to "label_2">})
-        ("string3", {<dict reference to "label_1">)
+        ("string1", { <DocLabel for "label_1">.name, <DocLabel for "label_2">.name })
+        ("string2", { <DocLabel for "label_1">.name, <DocLabel for "label_2">.name })
+        ("string3", { <DocLabel for "label_1">.name,)
 
 
     Args:
         doc_section (Any): Section of document
         target_doc_labels (list[DocLabel]): DocLabels corresponding to keys
             containing relevant text content
-        target_label_parent_refs (set[frozendict], optional): frozendict with
-            DocLabel.name and Doclabel.type Defaults to set().
+        target_label_parent_refs (set[str]): list of DocLabel names.
 
     Yields:
         Generator[tuple[str | int | float, dict], None, None]: See example
@@ -100,14 +98,14 @@ def get_text_under_doc_labels(
                 if doc_label.match_label(key):
                     current_target_category_parents.add(doc_label.name)
 
-            yield from get_text_under_doc_labels(
+            yield from get_content_under_doc_labels(
                 value,
                 target_doc_labels,
                 target_parent_label_names=current_target_category_parents,
             )
     elif isinstance(doc_section, list):
         for item in doc_section:
-            yield from get_text_under_doc_labels(
+            yield from get_content_under_doc_labels(
                 item,
                 target_doc_labels,
                 target_parent_label_names=target_parent_label_names,
@@ -125,15 +123,15 @@ def sent_tokenize_label_text(
     sent_tokenizer: SentTokenizer,
 ) -> list[dict[str, str | int | set[str]]]:
     """
-    Iterates over output of get_text_under_doc_labels and returns a list of
-    dictionaries containing the tokenized sentences, label ref dictionaries
+    Iterates over output of get_content_under_doc_labels and returns a list of
+    dictionaries containing the tokenized sentences, ancestor DocLabel names
     and the number of the group (the larger text content) each sentence came
     from.
 
     Args:
         doc_label_tex_iterator (
-            Generator[tuple[str  |  int  |  float, dict], None, None]):
-            Output of get_text_under_doc_labels
+            Generator[dict[str, Any | set[str]], None, None]):
+            Output of get_content_under_doc_labels
         sent_tokenizer (SentTokenizer): Spacy sent tokenizer
 
     Returns:
@@ -171,7 +169,7 @@ def get_sents_from_doc(
     doc: dict | list, target_doc_labels: list[DocLabel], sent_tokenizer: SentTokenizer
 ) -> list[dict[str, str | int | set[str]]]:
     """"""
-    iterator = get_text_under_doc_labels(doc, target_doc_labels=target_doc_labels)
+    iterator = get_content_under_doc_labels(doc, target_doc_labels=target_doc_labels)
     sents_with_refs = sent_tokenize_label_text(iterator, sent_tokenizer)
     return sents_with_refs
 
@@ -229,13 +227,12 @@ def get_doc_level_meta_props(
     doc: dict | list, target_doc_labels: list[DocLabel]
 ) -> list[dict[str, Any]]:
     """
-    Gets values for document-level DocLabels. Throws an error if more than one
-    key matching DocLabel is found.
+    Gets values for document-level meta properties from DocLabels. Throws an
+    error if more than one key matching DocLabel is found.
 
     For DocLabels where value_in_attrs is True, the value(s) are the non-"_tag"
     attributes of the corresponding key. Where value_in_attrs is False, the
-    value(s) are the value of the correponding key. In the latter case, if the
-    value is not a string/int/float, a ValueError will be thrown.
+    value(s) are the value of the correponding key.
     """
 
     raw_values_and_doc_labels = get_keys_or_values_for_doc_labels(
@@ -247,26 +244,31 @@ def get_doc_level_meta_props(
     # Keep track of added values from attribute-type meta values.
     # (They can occur in multiple nodes, so you need to make sure
     # no atrributes are repeated)
-    added_attr_type_meta_value_names = set()
+    added_label_name_attr_name_pairs = set()
 
     for value, doc_label in raw_values_and_doc_labels:
         if doc_label.value_in_attrs:
             attrs = dict(value)  # type: ignore
             attrs.pop("_tag")  # type: ignore
             for value_name, value in attrs.items():
-                name = f"{doc_label.name}-{value_name}"
-                if name in added_attr_type_meta_value_names:
+                pair = (doc_label.name, value_name)
+                if pair in added_label_name_attr_name_pairs:
                     error_str = f'Multiple values for attribute "{value_name}" found for document-level meta label "{doc_label.name}" in '
                     raise ValueError(error_str)
-                added_attr_type_meta_value_names.add(name)
-                meta_value_dict = {
-                    "name": name,
+                added_label_name_attr_name_pairs.add(pair)
+                meta_value_d = {
+                    "label_name": doc_label.name,
+                    "name": value_name,
                     "value": value,
                 }
-                meta_props.append(meta_value_dict)
+                meta_props.append(meta_value_d)
 
         else:
-            meta_value_dict = {"name": doc_label.name, "value": value}
-            meta_props.append(meta_value_dict)
+            meta_value_d = {
+                "label_name": doc_label.name,
+                "name": doc_label.name,
+                "value": value,
+            }
+            meta_props.append(meta_value_d)
 
     return meta_props

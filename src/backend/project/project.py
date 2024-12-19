@@ -1,12 +1,11 @@
 import json
 from pathlib import Path
-
 import shutil
 
 from backend.corpus.corpus import Corpus
 from backend.db.db import DatabaseManager
 from backend.corpus.process.process_corpus import CorpusProcessor
-from backend.project.config import Config, DocLabel, LabelType
+from backend.project.config import Config
 
 
 class Paths:
@@ -42,26 +41,6 @@ class Project:
 
     def save_config(self) -> None:
         self.config.save(self.config_path)
-
-    def get_text_labels(self, file_type: str | None = None) -> list[DocLabel]:
-        text_labels = list(self.corpus_config.text_labels.values())
-        if file_type:
-            text_labels = [
-                label for label in text_labels if label.file_type == file_type
-            ]
-        return text_labels
-
-    def get_meta_labels(self, file_type: str | None = None) -> list[DocLabel]:
-        meta_labels = list(self.corpus_config.meta_labels.values())
-        if file_type:
-            meta_labels = [
-                label for label in meta_labels if label.file_type == file_type
-            ]
-        return meta_labels
-
-    def get_doc_label(self, label_name: str, label_type: LabelType) -> DocLabel:
-        """label_name is DocLabel.name attribute"""
-        return self.corpus_config.label_type_dict[label_type][label_name]
 
     def load_db_manager(self, new_db: bool = False):
         self.db = DatabaseManager(self.paths.corpus_db)
