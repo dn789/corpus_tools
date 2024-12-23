@@ -1,29 +1,44 @@
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, ClassVar, Optional
 
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, model_validator
 
-from backend.corpus.features import (
+from backend.corpus.items import (
+    GenericCorpusItem,
     DocLabel,
     Folder,
     LabelType,
     MetaProperty,
     MetaType,
     TextCategory,
+    CorpusItem,
 )
 from backend.utils.functions import is_quant
 
 
 class CorpusConfig(BaseSettings):
     corpus_path: Optional[Path] = None
-    included_extensions: set[str] = Field(default_factory=set)
+    included_extensions: dict[str, GenericCorpusItem] = Field(default_factory=dict)
     ignored_extensions: set[str] = Field(default_factory=set)
     subfolders: dict[str, Folder] = Field(default_factory=dict)
     text_labels: dict[str, DocLabel] = Field(default_factory=dict)
     meta_labels: dict[str, DocLabel] = Field(default_factory=dict)
     text_categories: dict[str, TextCategory] = Field(default_factory=dict)
     meta_properties: dict[str, dict[str, MetaProperty]] = Field(default_factory=dict)
+
+    display_ref: ClassVar = {
+        "corpus_path": "Corpus path",
+        "included_extensions": "Content file extensions",
+        "subfolders": "Subfolders",
+        "text_labels": "Text labels",
+        "meta_labels": "Meta labels",
+        "text_categories": "Text categories",
+        "meta_properties": "Meta properties",
+    }
+
+    def get_display_name(self, field_name: str) -> str:
+        return self.display_ref[field_name]
 
     @property
     def label_type_dict(self) -> dict:
@@ -35,6 +50,12 @@ class CorpusConfig(BaseSettings):
     def get_doc_label(self, label_name: str, label_type: LabelType) -> DocLabel:
         """label_name is DocLabel.name attribute"""
         return self.label_type_dict[label_type][label_name]
+
+    def get_extensions(self) -> list[GenericCorpusItem]:
+        return [ext for name, ext in self.included_extensions.items()]
+
+    def get_subfolders(self) -> list[Folder]:
+        return list(self.subfolders.values())
 
     def get_text_labels(self, file_type: str | None = None) -> list[DocLabel]:
         text_labels = list(self.text_labels.values())
@@ -56,7 +77,7 @@ class CorpusConfig(BaseSettings):
         subfolder_names = []
         for folder in self.subfolders.values():
             if folder.path in path.parents:
-                subfolder_names.append(folder.display_name)
+                subfolder_names.append(folder.name)
         return subfolder_names
 
     def add_meta_property(self, meta_pro_ref: dict[str, Any]):
@@ -70,6 +91,23 @@ class CorpusConfig(BaseSettings):
             label_name=label_name,
             type=meta_type,  # type: ignore
         )
+
+    def update_corpus_items(
+        self,
+        prop_name: str,
+        content: CorpusItem | list[CorpusItem] | str | list[str],
+        remove: bool = False,
+    ) -> None:
+        if prop_name == "corpus_path":
+            self.corpus_path = content  # type: ignore
+            return
+        content = content if type(content) is list else [content]  # type: ignore
+        if remove:
+            for name in content:
+                getattr(self, prop_name).pop(name)
+        else:
+            for corpus_item in content:
+                getattr(self, prop_name)[corpus_item.name] = corpus_item  # type: ignore
 
 
 class Config(BaseSettings):

@@ -9,19 +9,24 @@ from pydantic import BaseModel, model_validator
 # General types
 
 
+class GenericCorpusItem(BaseModel):
+    name: str
+    color: tuple[int, int, int]
+
+
 class MetaType(str, Enum):
     QUANTITATIVE = "QUANTITATIVE"
     CATEGORICAL = "CATEGORICAL"
 
 
 class Folder(BaseModel):
-    color: str
+    color: tuple[int, int, int]
     path: Path
-    display_name: Optional[str] = None
+    name: Optional[str] = None
 
     @model_validator(mode="after")
     def set_display_name(cls, values):
-        values.display_name = values.path.name
+        values.name = values.path.name
         return values
 
 
@@ -35,13 +40,24 @@ class LabelType(str, Enum):
 
 class DocLabel(BaseModel):
     name: str
-    color: str
+    color: tuple[int, int, int]
     label_name: str
     label_attrs: dict[str, str]
     file_type: str
     type: LabelType
     meta_type: Optional[MetaType] = None
     value_in_attrs: bool = False
+
+    def escape_xml(self, text):
+        return text.replace("<", "&lt;").replace(">", "&gt;")
+
+    def get_tooltip(self):
+        if self.file_type == ".json":
+            return f"Key <b>{self.label_name}</b> in <b>JSON</b> files"
+        if self.file_type == ".xml":
+            label_attrs = " ".join(f"{k}={v}" for k, v in self.label_attrs.items())
+            label_attrs = f" {label_attrs}"
+            return f"&lt;<b>{self.label_name}{label_attrs}</b>&gt; in <b>XML</b> files"
 
     def match_label(self, label: str | int | bool | frozendict) -> bool:
         """Checks if self matches label
@@ -78,15 +94,27 @@ class DocLabel(BaseModel):
 class TextCategory(BaseModel):
     # Same as corresponding DocLabel
     name: str
+    color: tuple[int, int, int]
 
 
 class MetaProperty(BaseModel):
     # name or name[0] same as corresponding DocLabel
     name: str
-    label_name: Optional[str] = None
+    label_name: str
+    color: tuple[int, int, int]
+    display_name: Optional[str] = None
     type: Optional[MetaType] = None
     # For QUANTITATIVE types
     min: Any = 0
     max: Any = 0
     # For categorical types
     cat_values: Optional[set[str]] = None
+
+    @model_validator(mode="after")
+    def set_display_name(cls, values):
+        if not values.display_name:
+            values.display_name = values.name
+        return values
+
+
+CorpusItem = DocLabel | TextCategory | MetaProperty | GenericCorpusItem

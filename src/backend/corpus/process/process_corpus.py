@@ -3,7 +3,7 @@ from typing import Any
 
 from tqdm import tqdm
 
-from backend.corpus.features import MetaType
+from backend.corpus.items import MetaType
 from backend.db.db import DatabaseManager
 from backend.corpus.process.process_cha import process_cha_file
 from backend.project.config import CorpusConfig

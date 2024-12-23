@@ -1,4 +1,4 @@
-from backend.corpus.features import MetaProperty, TextCategory
+from backend.corpus.items import MetaProperty, TextCategory
 from backend.db.db import DatabaseManager
 from backend.project.config import CorpusConfig
 
