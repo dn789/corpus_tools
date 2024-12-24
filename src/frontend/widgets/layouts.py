@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, qDebug
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -135,6 +135,14 @@ class HScrollSection(QWidget):
         if not self.content_ref:
             self.empty_widget.show()
         self.content_count.setText(f"({len(self.content_ref)})")
+
+    def clear(self) -> None:
+        for key, widget in self.content_ref.items():
+            qDebug(key)
+            qDebug(str(widget))
+            self.content_layout.removeWidget(widget)
+            widget.deleteLater()
+        self.content_ref = {}
 
 
 class ColumnScrollArea(QScrollArea):

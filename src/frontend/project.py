@@ -1,10 +1,9 @@
 from pathlib import Path
+from typing import Any
 from PySide6.QtCore import Signal, qDebug
 from PySide6.QtWidgets import QWidget
 
 from backend.project.project import Project
-from backend.corpus.items import CorpusItem, GenericCorpusItem
-from frontend.styles.colors import random_color_rgb
 
 
 class ProjectWrapper(Project, QWidget):
@@ -25,6 +24,7 @@ class ProjectWrapper(Project, QWidget):
 
     def load_project(self, project_folder: Path | None = None) -> None:
         self._load_project(project_folder)
+        qDebug("loading from project wrapper")
         self.projectLoaded.emit()
 
     def save_config(self) -> None:
@@ -38,23 +38,9 @@ class ProjectWrapper(Project, QWidget):
     def update_corpus_items(
         self,
         prop_name: str,
-        content: CorpusItem | list[CorpusItem] | str | list[str] | Path,
+        content: Any | list[Any],
         remove: bool = False,
     ) -> None:
-        if not remove:
-            content = self.make_corpus_item(prop_name, content)  # type: ignore
-
         kwargs = {"prop_name": prop_name, "content": content, "remove": remove}
         self._update_corpus_items(**kwargs)
         self.corpusConfigUpdated.emit(prop_name, content, remove)
-
-    def make_corpus_item(
-        self, prop_name: str, content: str | list[str]
-    ) -> list[CorpusItem]:
-        content = [content] if type(content) is str else content
-        items = []
-        for item in content:
-            if prop_name == "included_extensions":
-                item = GenericCorpusItem(name=item, color=random_color_rgb())  # type: ignore
-            items.append(item)
-        return items

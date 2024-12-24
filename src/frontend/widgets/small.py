@@ -5,10 +5,9 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
 
 from backend.corpus.items import CorpusItem
-from frontend.styles.colors import Colors, is_dark, random_color_rgb
-from frontend.styles.icons import get_folder_closed_icon
+from frontend.styles.colors import Colors, is_dark
+from frontend.styles.icons import Icons
 from frontend.styles.sheets import add_tooltip
-from frontend.utils.paths import Icons
 
 
 class Button(QPushButton):
@@ -157,7 +156,7 @@ class FolderSelectWidget(QWidget):
 class FolderSelectButton(QPushButton):
     def __init__(self, tooltip: str = "Select Folder"):
         super().__init__()
-        icon = get_folder_closed_icon()
+        icon = Icons.folder_closed()
         self.setIcon(icon)
         self.setIconSize(icon.pixmap(25, 25).size())
         self.setStyleSheet("QPushButton {border: none;}")

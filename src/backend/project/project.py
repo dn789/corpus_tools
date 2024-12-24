@@ -67,7 +67,7 @@ class Project:
     def _update_corpus_items(
         self,
         prop_name: str,
-        content: CorpusItem | list[CorpusItem] | str | list[str] | Path,
+        content: CorpusItem | list[CorpusItem] | str | list[str] | Path,  # type: ignore
         remove: bool = False,
     ) -> None:
         self.corpus_config.update_corpus_items(prop_name, content, remove)  # type: ignore

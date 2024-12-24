@@ -17,17 +17,127 @@ from PySide6.QtWidgets import (
     QWidgetAction,
 )
 
+from backend.corpus.items import Folder
 from frontend.styles.colors import Colors
-from frontend.styles.icons import get_folder_closed_icon, get_file_icon
+from frontend.styles.icons import Icons
 
 # from frontend.widgets.small import ContextMenuAction
 from frontend.project import ProjectWrapper as Project
 from frontend.widgets.small import CorpusTag
 from frontend.utils.functions import (
     clear_layout,
+    make_corpus_item,
     # get_xml_node_str_from_xml_node,
     # parse_xml_node_str,
 )
+
+
+class TreeNodeOld(QWidget):
+    def __init__(
+        self, name: str, icon: QIcon | None = None, tree_type: str = "folder"
+    ) -> None:
+        super().__init__()
+        self.name = name
+        self.tree_type = tree_type
+        self.main_layout = QHBoxLayout()
+        self.main_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.main_layout.setContentsMargins(5, 5, 5, 5)
+        self.setLayout(self.main_layout)
+        self.icon_label = None
+
+        if icon:
+            self.set_icon(icon)
+
+        self.text_label = QLabel(name)
+        if self.tree_type == "folder":
+            self.text_label.setStyleSheet(f"""
+                    QWidget {{
+                        font-size: 16px;
+                        border-radius: 5px;
+                        padding: 2px;
+                    }}
+                    QWidget:hover {{
+                        background-color: {Colors.light_blue};
+                    }}""")
+        else:
+            self.text_label.setStyleSheet(f"""
+                    QWidget {{
+                        font-size: 14px;
+                        border-radius: 5px;
+                        background-color: {Colors.light_blue};
+                        padding: 3px;
+                        border: 1px solid black;
+                    }}
+                    QWidget:hover {{
+                        background-color: {Colors.light_gray};
+                    }}""")
+
+        self.main_layout.addWidget(self.text_label)
+        self.tag_layout = QHBoxLayout()
+        self.main_layout.addLayout(self.tag_layout)
+
+    def set_icon(self, icon: QIcon):
+        if self.icon_label:
+            self.main_layout.removeWidget(self.icon_label)
+            self.icon_label.deleteLater()
+        self.icon_label = QLabel()
+        # self.icon_label.setIcon(icon)
+        self.icon_label.setPixmap(icon.pixmap(25, 25))
+        self.main_layout.insertWidget(0, self.icon_label)
+
+
+class TreeNode(QWidget):
+    def __init__(
+        self, name: str, icon: QIcon | None = None, tree_type: str = "folder"
+    ) -> None:
+        super().__init__()
+        self.name = name
+        self.tree_type = tree_type
+        self.main_layout = QHBoxLayout()
+        self.main_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.main_layout.setContentsMargins(5, 5, 5, 5)
+        self.setLayout(self.main_layout)
+        self.icon_label = None
+
+        if icon:
+            self.set_icon(icon)
+
+        self.text_label = QLabel(name)
+        if self.tree_type == "folder":
+            self.setStyleSheet(f"""
+                    QLabel {{
+                        font-size: 16px;
+                        border-radius: 5px;
+                        padding: 2px;
+                    }}
+                    QLabel:hover {{
+                        background-color: {Colors.light_blue};
+                    }}""")
+        else:
+            self.setStyleSheet(f"""
+                    QWidget {{
+                        font-size: 14px;
+                        border-radius: 5px;
+                        background-color: {Colors.light_blue};
+                        padding: 3px;
+                        border: 1px solid black;
+                    }}
+                    QWidget:hover {{
+                        background-color: {Colors.light_gray};
+                    }}""")
+
+        self.main_layout.addWidget(self.text_label)
+        self.tag_layout = QHBoxLayout()
+        self.main_layout.addLayout(self.tag_layout)
+
+    def set_icon(self, icon: QIcon):
+        if self.icon_label:
+            self.main_layout.removeWidget(self.icon_label)
+            self.icon_label.deleteLater()
+        self.icon_label = QLabel()
+        # self.icon_label.setIcon(icon)
+        self.icon_label.setPixmap(icon.pixmap(25, 25))
+        self.main_layout.insertWidget(0, self.icon_label)
 
 
 class FolderViewer(QTreeWidget):
@@ -39,8 +149,9 @@ class FolderViewer(QTreeWidget):
         self.project.projectLoaded.connect(self.populate_tree)
         self.project.projectLoaded.connect(self.tag_nodes_on_project_load)
         self.project.corpusConfigUpdated.connect(self.tag_nodes)
-        self.folder_icon = get_folder_closed_icon()
-        self.file_icon = get_file_icon()
+        self.folder_icon = Icons.folder_closed()
+        self.file_icon = Icons.file()
+        self.file_checked_icon = Icons.file_checked()
         self.action_ref = ActionRef(self.project, "FolderViewer")
         self.setStyleSheet("""
             QTreeWidget::item {
@@ -77,76 +188,88 @@ class FolderViewer(QTreeWidget):
             if node_path.is_dir():
                 self.add_node(tree_item, node_path)
 
+    # def tag_nodes_on_project_load(self):
+    #     for setting in self.project.settings["corpus"].values():
+    #         if setting.type not in ("folder", "ext"):
+    #             continue
+    #         update_dict = {"setting_name": setting.name, "update": setting.value}
+    #         self.tag_nodes(update_dict)
+
+    def set_icon_on_tree_node(self, icon: QIcon, tree_node: TreeNode) -> None:
+        tree_node.set_icon(icon)
+
     def tag_nodes_on_project_load(self):
-        for setting in self.project.settings["corpus"].values():
-            if setting.type not in ("folder", "ext"):
-                continue
-            update_dict = {"setting_name": setting.name, "update": setting.value}
-            self.tag_nodes(update_dict)
+        qDebug("loading")
+        self.tag_nodes(
+            "included_extensions", self.project.corpus_config.get_extensions()
+        )
+        self.tag_nodes("subfolders", self.project.corpus_config.get_subfolders())
 
-    def tag_nodes(self, update_dict):
-        if update_dict.get("remove_setting"):
-            setting = update_dict["setting"]
+    def tag_nodes(self, prop_name, content, remove: bool = False):
+        content = content if type(content) is list else [content]
+
+        if prop_name == "included_extensions":
+            if remove:
+                targets = content
+
+                def action_func(_: Any, tree_node_widget: TreeNode) -> None:  # type: ignore
+                    tree_node_widget.set_icon(self.file_icon)
+            else:
+                targets = [item.name for item in content]
+
+                def action_func(_: Any, tree_node_widget: TreeNode) -> None:  # type: ignore
+                    tree_node_widget.set_icon(self.file_checked_icon)
+
+            def filter_func(node: QTreeWidgetItem):  # type: ignore
+                path = node.data(0, 1)
+                return path and path.is_file() and path.suffix in targets
+
+        elif prop_name == "subfolders":
+            targets = content
+            if remove:
+
+                def action_func(_: Any, tree_node_widget: TreeNode):  # type: ignore
+                    tree_node_widget.text_label.setStyleSheet("background-color: none;")
+            else:
+
+                def action_func(target: Folder, tree_node_widget: TreeNode):
+                    # node_widget: TreeNode = self.itemWidget(node, 0)
+                    tree_node_widget.text_label.setStyleSheet(
+                        f"background-color: rgb{target.color};"
+                    )
+
+            def filter_func(node: QTreeWidgetItem) -> Folder | None:
+                path = node.data(0, 1)
+                for target in targets:
+                    if type(target) is Folder:
+                        if path == target.path:
+                            return target
+                    elif path == target:
+                        return target
+
         else:
-            setting = self.project.get_setting("corpus", update_dict["setting_name"])
-        if setting.type not in ("folder", "ext"):
             return
-        item_func = self.action_ref.setting_type_to_item_func.get(setting.type)
-        if not item_func:
-            return
-        tag_text = setting.display_name.split()[0]
-        color = setting.color
 
-        remove = update_dict.get("remove")
         root = self.invisibleRootItem()
-        update = update_dict["update"]
-        if not isinstance(update, (list, set)):
-            update = [update]
 
-        for target_str in update:
-            self.tag_nodes_inner(
-                root,
-                target_str,
-                tag_text,
-                color=color,
-                item_func=item_func,
-                remove=remove,
-            )
+        self.tag_nodes_inner(
+            root,
+            filter_func,
+            action_func,
+        )
 
     def tag_nodes_inner(
         self,
-        node,
-        target_str: str,
-        tag_text: str,
-        color: str,
-        item_func: Callable,
-        remove: bool = False,
+        node: QTreeWidgetItem,
+        filter_func: Callable,
+        action_func: Callable,
     ):
-        widget: TreeNode = self.itemWidget(node, 0)  # type: ignore
-        if isinstance(prelim_item := node.data(0, 1), Path):
-            item_str = item_func(prelim_item)
-            if item_str == target_str:
-                if not remove:
-                    widget.add_tag(tag_text, color)
-                else:
-                    widget.remove_tag(tag_text)
-
-        elif isinstance(prelim_item := node.data(0, 0), str):
-            if prelim_item == target_str:
-                if not remove:
-                    widget.add_tag(tag_text, color)
-                else:
-                    widget.remove_tag(tag_text)
+        tree_node_widget: TreeNode = self.itemWidget(node, 0)  # type: ignore
+        if target := filter_func(node):
+            action_func(target, tree_node_widget)
 
         for i in range(node.childCount()):  # Iterate through child items
-            self.tag_nodes_inner(
-                node.child(i),
-                target_str,
-                tag_text,
-                color=color,
-                item_func=item_func,
-                remove=remove,
-            )
+            self.tag_nodes_inner(node.child(i), filter_func, action_func)
 
 
 class DocViewer(QTreeWidget):
@@ -357,52 +480,6 @@ class DocViewer(QTreeWidget):
             )
 
 
-class TreeNode(QWidget):
-    def __init__(
-        self, name: str, icon: QIcon | None = None, tree_type: str = "folder"
-    ) -> None:
-        super().__init__()
-        self.name = name
-        self.tree_type = tree_type
-        main_layout = QHBoxLayout()
-        main_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        main_layout.setContentsMargins(5, 5, 5, 5)
-        self.setLayout(main_layout)
-
-        if icon:
-            icon_label = QLabel()
-            icon_label.setPixmap(icon.pixmap(20, 20))
-            main_layout.addWidget(icon_label)
-
-        text_label = QLabel(name)
-        if self.tree_type == "folder":
-            text_label.setStyleSheet(f"""
-                    QWidget {{
-                        font-size: 16px;
-                        border-radius: 5px;
-                        padding: 2px;
-                    }}
-                    QWidget:hover {{
-                        background-color: {Colors.light_blue};
-                    }}""")
-        else:
-            text_label.setStyleSheet(f"""
-                    QWidget {{
-                        font-size: 14px;
-                        border-radius: 5px;
-                        background-color: {Colors.light_blue};
-                        padding: 3px;
-                        border: 1px solid black;
-                    }}
-                    QWidget:hover {{
-                        background-color: {Colors.light_gray};
-                    }}""")
-
-        main_layout.addWidget(text_label)
-        self.tag_layout = QHBoxLayout()
-        main_layout.addLayout(self.tag_layout)
-
-
 class DocText(QLabel):
     def __init__(self, text, index: int | None = None):
         super().__init__()
@@ -446,14 +523,18 @@ class TreeContextMenu(QMenu):
             "meta_labels",
         ):
             menu_item = None
+            menu_item_display_name = None
             remove = False
 
             if self.type == "folder":
                 if clicked_item.is_file() and prop_name == "included_extensions":
                     menu_item = clicked_item.suffix
+                    menu_item_display_name = menu_item
 
                 elif clicked_item.is_dir() and prop_name == "subfolders":
+                    self.add_multi_subfolder_action(clicked_item, actions)
                     menu_item = clicked_item
+                    menu_item_display_name = clicked_item.name
 
             else:
                 # Need to figure this out
@@ -472,11 +553,16 @@ class TreeContextMenu(QMenu):
                 prop_display_name = self.project.corpus_config.get_display_name(
                     prop_name
                 )
-                text = f"{verb[0]} {menu_item} {verb[1]} {prop_display_name}"
+                text = f"{verb[0]} <b>{menu_item_display_name}</b> {verb[1]} {prop_display_name.lower()}"
 
-                def func(_, prop_name=prop_name, item=clicked_item, remove=remove):
+                if not remove:
+                    content = make_corpus_item(prop_name, menu_item)
+                else:
+                    content = menu_item
+
+                def func(_, prop_name=prop_name, content=content, remove=remove):
                     return self.project.update_corpus_items(
-                        prop_name, item.suffix, remove=remove
+                        prop_name, content, remove=remove
                     )
 
                 action = ContextMenuAction(self, text, func)
@@ -485,16 +571,37 @@ class TreeContextMenu(QMenu):
         for action in actions:
             self.actions_layout.addWidget(action)
 
-        # for action_setup in self.action_ref.get_action_setups(unset_item):
-        #     action = ContextMenuAction(self, action_setup["text"], action_setup["func"])
-        #     self.actions_layout.addWidget(action)
-        #     self.actions_layout.addWidget(action)
-
         self.check_if_empty()
 
     def check_if_empty(self):
         if self.actions_layout.isEmpty():
             QTimer.singleShot(0, self.close)
+
+    def add_multi_subfolder_action(self, path: Path, actions: list) -> None:
+        remove = False
+        subfolders = [subpath for subpath in path.iterdir() if subpath.is_dir()]
+        if not subfolders:
+            return
+        added_subfolders = [
+            folder
+            for folder in subfolders
+            if folder in self.project.corpus_config.subfolders
+        ]
+        if added_subfolders:
+            remove = True
+            subfolders = added_subfolders
+        else:
+            subfolders = [
+                make_corpus_item("subfolders", subfolder) for subfolder in subfolders
+            ]
+        verb = ("Remove", "from") if remove else ("Add", "to")
+        text = f"{verb[0]} subfolders of <b>{path.name}</b> {verb[1]} subfolders"
+
+        def func(_, prop_name="subfolders", content=subfolders, remove=remove):
+            return self.project.update_corpus_items(prop_name, content, remove=remove)
+
+        action = ContextMenuAction(self, text, func)
+        actions.append(action)
 
     def show(self, pos):
         # Remove any existing QWidgetAction first to prevent stacking actions
@@ -514,17 +621,17 @@ class ContextMenuAction(QLabel):
         self.parent = parent
         self.setText(text)
         self.func = func
-        self.setStyleSheet("""
-            QLabel {
+        self.setStyleSheet(f"""
+            QLabel {{
                 padding: 10px;
                 background-color: transparent;
-                border: 1px solid #ccc;
+                border: 1px solid black;
                 border-radius: 5px;
-                font-size: 14px;
-            }
-            QLabel:hover {
-                background-color:  #daeef5;
-            }
+                font-size: 16px;
+            }}
+            QLabel:hover {{
+                background-color:  {Colors.light_blue};
+            }}
         """)
 
         # Make it clickable

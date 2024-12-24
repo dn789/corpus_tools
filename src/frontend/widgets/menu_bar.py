@@ -67,7 +67,7 @@ class MenuBar(QMenuBar):
         self.save_action.setEnabled(False)
 
     def new_project(self) -> None:
-        self.project._new_project()
+        self.project.new_project()
         self.disable_save()
 
     def load_project(self) -> None:
@@ -81,14 +81,14 @@ class MenuBar(QMenuBar):
         project_folder = Path(project_folder)
         if project_folder.is_dir():
             try:
-                self.project._load_project(project_folder)
+                self.project.load_project(project_folder)
                 self.disable_save()
             except Exception as e:
                 MessageBox.information(str(e), "Error opening folder")
 
     def save_project(self) -> None:
         "Currently only save_config"
-        self.project._save_config()
+        self.project.save_config()
         self.disable_save()
 
     def save_project_as(self) -> None:

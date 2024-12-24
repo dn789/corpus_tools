@@ -108,13 +108,13 @@ class CorpusConfigView(MainColumn):
     def load_config(self):
         if not self.config:
             return
-
         for prop_name in (
             "included_extensions",
             "subfolders",
             "text_labels",
             "meta_labels",
         ):
+            self.ref[prop_name]["widget"].clear()
             self.update_corpus_items(
                 prop_name, list(self.ref[prop_name]["property"].values())
             )
@@ -137,6 +137,7 @@ class CorpusConfigView(MainColumn):
             corpus_items: list[CorpusItem] = content  # type: ignore
             to_add = {}
             for item in corpus_items:
+                key = self.project.corpus_config.get_item_key(item)
                 # Get tooltip text
                 if type(item) is DocLabel:
                     tooltip = item.get_tooltip() or item.name
@@ -145,13 +146,16 @@ class CorpusConfigView(MainColumn):
                 else:
                     tooltip = item.name
 
-                def remove_func(prop_name=prop_name, content=item.name):
+                def remove_func(
+                    prop_name=prop_name,
+                    remove_key=key,
+                ):
                     return self.project.update_corpus_items(
-                        prop_name, content, remove=True
+                        prop_name, remove_key, remove=True
                     )
 
                 widget = CorpusTag(item, tooltip=tooltip, remove_func=remove_func)
-                to_add[item.name] = widget
+                to_add[key] = widget
             prop_widget.add_content(to_add)
 
     def select_corpus_folder(self) -> None:

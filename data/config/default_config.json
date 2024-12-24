@@ -1,7 +1,7 @@
 {
     "corpus_config": {
         "corpus_path": null,
-        "included_extensions": [],
+        "included_extensions": {},
         "ignored_extensions": [],
         "subfolders": {},
         "text_labels": {},

@@ -1,8 +1,9 @@
 from pathlib import Path
 from typing import Any, ClassVar, Optional
 
+from PySide6.QtCore import qDebug
 from pydantic_settings import BaseSettings
-from pydantic import Field, model_validator
+from pydantic import Field
 
 from backend.corpus.items import (
     GenericCorpusItem,
@@ -21,7 +22,7 @@ class CorpusConfig(BaseSettings):
     corpus_path: Optional[Path] = None
     included_extensions: dict[str, GenericCorpusItem] = Field(default_factory=dict)
     ignored_extensions: set[str] = Field(default_factory=set)
-    subfolders: dict[str, Folder] = Field(default_factory=dict)
+    subfolders: dict[Path, Folder] = Field(default_factory=dict)
     text_labels: dict[str, DocLabel] = Field(default_factory=dict)
     meta_labels: dict[str, DocLabel] = Field(default_factory=dict)
     text_categories: dict[str, TextCategory] = Field(default_factory=dict)
@@ -46,6 +47,12 @@ class CorpusConfig(BaseSettings):
             LabelType.TEXT: self.text_labels,
             LabelType.META: self.meta_labels,
         }
+
+    def get_item_key(self, corpus_item: CorpusItem) -> Any:
+        if type(corpus_item) is Folder:
+            return corpus_item.path
+        else:
+            return corpus_item.name
 
     def get_doc_label(self, label_name: str, label_type: LabelType) -> DocLabel:
         """label_name is DocLabel.name attribute"""
@@ -103,11 +110,11 @@ class CorpusConfig(BaseSettings):
             return
         content = content if type(content) is list else [content]  # type: ignore
         if remove:
-            for name in content:
-                getattr(self, prop_name).pop(name)
+            for key in content:
+                getattr(self, prop_name).pop(key)
         else:
             for corpus_item in content:
-                getattr(self, prop_name)[corpus_item.name] = corpus_item  # type: ignore
+                getattr(self, prop_name)[self.get_item_key(corpus_item)] = corpus_item  # type: ignore
 
 
 class Config(BaseSettings):

@@ -117,4 +117,4 @@ class MetaProperty(BaseModel):
         return values
 
 
-CorpusItem = DocLabel | TextCategory | MetaProperty | GenericCorpusItem
+CorpusItem = Folder | DocLabel | TextCategory | MetaProperty | GenericCorpusItem
