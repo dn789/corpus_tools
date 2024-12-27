@@ -24,7 +24,6 @@ class ProjectWrapper(Project, QWidget):
 
     def load_project(self, project_folder: Path | None = None) -> None:
         self._load_project(project_folder)
-        qDebug("loading from project wrapper")
         self.projectLoaded.emit()
 
     def save_config(self) -> None:

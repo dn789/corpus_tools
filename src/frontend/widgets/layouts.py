@@ -59,6 +59,7 @@ class HScrollSection(QWidget):
         content: dict[str, QWidget],
         background_color: str = Colors.light_blue,
         show_content_count: bool = True,
+        placeholder_text: str = "None",
     ):
         super().__init__()
         # Content reference
@@ -113,19 +114,25 @@ class HScrollSection(QWidget):
 
         self.outer_layout.addWidget(scroll_wrapper)
 
-        self.empty_widget = QLabel("None")
-        self.empty_widget.hide()
-        self.content_layout.addWidget(self.empty_widget)
+        self.placeholder_widget = QLabel(f"<i>{placeholder_text}</i>")
+        self.placeholder_widget.setSizePolicy(
+            QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Maximum
+        )
+        self.placeholder_widget.setWordWrap(True)
+        self.placeholder_widget.setStyleSheet("font-size: 16px;")
+        self.placeholder_widget.hide()
+        self.content_layout.addWidget(self.placeholder_widget)
         self.add_content(content)
 
     def add_content(self, content: dict[str, QWidget]) -> None:
         for key, widget in content.items():
+            # qDebug("adding")
             self.content_ref[key] = widget
             self.content_layout.addWidget(widget)
         if self.content_ref:
-            self.empty_widget.hide()
+            self.placeholder_widget.hide()
         else:
-            self.empty_widget.show()
+            self.placeholder_widget.show()
         self.content_count.setText(f"({len(self.content_ref)})")
 
     def remove_content(self, content_key: str | list[str]) -> None:
@@ -133,13 +140,14 @@ class HScrollSection(QWidget):
         self.content_layout.removeWidget(widget)
         widget.deleteLater()
         if not self.content_ref:
-            self.empty_widget.show()
+            self.placeholder_widget.show()
         self.content_count.setText(f"({len(self.content_ref)})")
 
     def clear(self) -> None:
         for key, widget in self.content_ref.items():
-            qDebug(key)
-            qDebug(str(widget))
+            # qDebug(str(key))
+            # qDebug(str(widget))
+            # qDebug("\n---------------\n")
             self.content_layout.removeWidget(widget)
             widget.deleteLater()
         self.content_ref = {}

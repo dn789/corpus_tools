@@ -55,9 +55,11 @@ class DocLabel(BaseModel):
         if self.file_type == ".json":
             return f"Key <b>{self.label_name}</b> in <b>JSON</b> files"
         if self.file_type == ".xml":
-            label_attrs = " ".join(f"{k}={v}" for k, v in self.label_attrs.items())
+            label_attrs = " ".join(
+                f"<i>{k}</i>=<b>{v}</b>" for k, v in self.label_attrs.items()
+            )
             label_attrs = f" {label_attrs}"
-            return f"&lt;<b>{self.label_name}{label_attrs}</b>&gt; in <b>XML</b> files"
+            return f"&lt;<b>{self.label_name}</b>{label_attrs}&gt; in <b>XML</b> files"
 
     def match_label(self, label: str | int | bool | frozendict) -> bool:
         """Checks if self matches label

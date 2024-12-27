@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, qDebug
 
 
+from backend.corpus.process.process_doc import file_to_doc
 from backend.corpus.items import DocLabel, CorpusItem, Folder
 from frontend.project import ProjectWrapper as Project
 from frontend.widgets.layouts import HScrollSection, MainColumn, Splitter
@@ -19,7 +20,7 @@ from frontend.widgets.small import (
     LargeHeading,
     MediumHeading,
 )
-from frontend.widgets.trees import FolderViewer, TreeContextMenu
+from frontend.widgets.trees import FolderViewer, DocViewer, TreeContextMenu
 
 
 class CorpusConfigTab(QWidget):
@@ -41,12 +42,21 @@ class CorpusConfigTab(QWidget):
         folder_widget_wrapper.setLayout(folder_widget_layout)
         tree_splitter.addWidget(folder_widget_wrapper)
 
-        tree_splitter.addWidget(QWidget())
+        doc_widget_wrapper = QWidget()
+        doc_widget_layout = QVBoxLayout()
+        doc_widget_layout.addWidget(LargeHeading("Document"))
+        self.doc_widget = DocViewer(self.project)
+        doc_widget_layout.addWidget(self.doc_widget)
+        doc_widget_wrapper.setLayout(doc_widget_layout)
+        tree_splitter.addWidget(doc_widget_wrapper)
+
+        self.folder_widget.itemDoubleClicked.connect(self.display_doc)
+
         main_layout.addWidget(self.config_view)
         main_layout.addWidget(tree_splitter)
         self.setLayout(main_layout)
 
-        for widget in (self.folder_widget,):
+        for widget in (self.folder_widget, self.doc_widget):
             widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             widget.context_menu = TreeContextMenu(  # type: ignore
                 widget, self.project
@@ -61,17 +71,23 @@ class CorpusConfigTab(QWidget):
         self.config_view.load_config()
 
     def show_context_menu(self, pos, widget):
+        # data = widget.itemAt(pos).data(0,1)
+
         tree_item = widget.itemAt(pos)
+
         if tree_item:
-            widget.context_menu.add_actions(tree_item)
+            data = tree_item.data(0, 1)
+            tree_widget = widget.itemWidget(tree_item, 0)
+            widget.context_menu.add_actions(data, tree_widget)
             widget.context_menu.show(pos)
 
     def display_doc(self, item: QTreeWidgetItem) -> None:
         item_path = Path(item.data(0, 1))
         if item_path.is_file():
             try:
-                self.doc_view_widget.display_file(item_path)
-            except:
+                doc = file_to_doc(item_path)
+                self.doc_widget.populate_tree(doc, item_path)  # type: ignore
+            except NotImplementedError:
                 pass
 
 
@@ -83,31 +99,42 @@ class CorpusConfigView(MainColumn):
         super().__init__("Configuration")
         self.ref = {}
 
-        corpus_path_widget = QWidget()
+        # Corpus path widget
+        corpus_path_widget_wrapper = QWidget()
         layout = QVBoxLayout()
-        corpus_path_widget.setLayout(layout)
+        corpus_path_widget_wrapper.setLayout(layout)
         layout.addWidget(MediumHeading("Corpus folder"))
-        layout.addWidget(FolderSelectWidget(self.config.corpus_path))
+        corpus_path_widget = FolderSelectWidget(self.config.corpus_path)
+        layout.addWidget(corpus_path_widget)
         self.ref["corpus_path"] = corpus_path_widget
-        self.add_widget(corpus_path_widget)
+        self.add_widget(corpus_path_widget_wrapper)
 
-        for prop_name in (
-            "included_extensions",
-            "subfolders",
-            "text_labels",
-            "meta_labels",
+        for prop_name, placeholder_text in (
+            ("included_extensions", "Extensions of files to include in the analysis"),
+            ("subfolders", "Subfolders to analyze individually"),
+            (
+                "text_labels",
+                "Document labels (e.g. nodes in XML files or keys in JSON files) representing text content",
+            ),
+            (
+                "meta_labels",
+                'Document labels representing meta content, such as "age" or  "education level" ',
+            ),
         ):
             self.ref[prop_name] = {
                 "widget": HScrollSection(
-                    self.project.corpus_config.get_display_name(prop_name), {}
+                    self.project.corpus_config.get_display_name(prop_name),
+                    {},
+                    placeholder_text=placeholder_text,
                 ),
-                "property": getattr(self.project.corpus_config, prop_name),
+                "prop_name": prop_name,
             }
             self.add_widget(self.ref[prop_name]["widget"])
 
     def load_config(self):
         if not self.config:
             return
+        self.ref["corpus_path"].set_path(self.project.corpus_config.corpus_path)
         for prop_name in (
             "included_extensions",
             "subfolders",
@@ -116,7 +143,7 @@ class CorpusConfigView(MainColumn):
         ):
             self.ref[prop_name]["widget"].clear()
             self.update_corpus_items(
-                prop_name, list(self.ref[prop_name]["property"].values())
+                prop_name, list(getattr(self.project.corpus_config, prop_name).values())
             )
 
     def update_corpus_items(

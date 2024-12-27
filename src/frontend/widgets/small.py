@@ -11,10 +11,15 @@ from frontend.styles.sheets import add_tooltip
 
 
 class Button(QPushButton):
-    def __init__(self, text: str, connect: Callable | None = None):
+    def __init__(
+        self, text: str, connect: Callable | None = None, tooltip: str | None = None
+    ):
         super().__init__(text)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.clicked.connect(connect)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        if tooltip:
+            add_tooltip(self, tooltip)
         # self.setStyleSheet(f"""""")
 
 
@@ -42,11 +47,23 @@ class MediumHeading(QLabel):
         self.setToolTip(tooltip)
 
 
+class CorpusLabel(QLabel):
+    def __init__(self, text, color: tuple[int, int, int]) -> None:
+        super().__init__(text)
+        self.setStyleSheet(f""" 
+            QLabel {{
+                background-color: rgb{color};
+                border-radius: 5px;
+                margin: 0px;
+            }}    """)
+
+
 class CorpusTag(QWidget):
     def __init__(
         self, obj: CorpusItem, tooltip: str = "", remove_func: Callable | None = None
     ) -> None:
         super().__init__()
+
         text_color = "white" if is_dark(*obj.color) else "black"  # type: ignore
         self.setStyleSheet(f"""
             QWidget {{
@@ -147,8 +164,11 @@ class FolderSelectWidget(QWidget):
             folder_select_button.clicked.connect(handle)
         layout.addWidget(folder_select_button)
 
-    def set_path(self, path: str | Path):
-        text = str(path)
+    def set_path(self, path: str | Path | None = None):
+        if not path:
+            text = self.default_text
+        else:
+            text = str(path)
         self.text_label.setText(text[-40:])
         add_tooltip(self.text_label, text, add_style=False)
 
