@@ -62,13 +62,11 @@ class ColorSelectButton(QPushButton):
         self.setFixedWidth(30)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
-    def change_color(self, color: QColor) -> None:
-        rgb_color = color.toTuple()[:-1]  # type: ignore
-        # qDebug(str(color.toRgb().toTuple()))
+    def change_color(self, color: tuple[int, int, int]) -> None:
         stylesheet = f"""
             QPushButton {{
                 border-radius: 5px;
-                background-color: rgb{rgb_color}; 
+                background-color: rgb{color}; 
         }}"""
         self.setStyleSheet(stylesheet)
         add_tooltip(self, "Select color")

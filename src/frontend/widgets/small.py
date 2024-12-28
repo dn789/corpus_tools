@@ -1,8 +1,16 @@
 from pathlib import Path
 from typing import Callable
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
+from PySide6.QtGui import QFontMetrics, QPainter, QPixmap, QTextLayout
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QRadioButton,
+    QSizePolicy,
+    QWidget,
+)
 
 from backend.corpus.items import CorpusItem
 from frontend.styles.colors import Colors, is_dark
@@ -12,15 +20,52 @@ from frontend.styles.sheets import add_tooltip
 
 class Button(QPushButton):
     def __init__(
-        self, text: str, connect: Callable | None = None, tooltip: str | None = None
+        self,
+        text: str,
+        connect: Callable | None = None,
+        tooltip: str | None = None,
+        font_size: int = 18,
     ):
         super().__init__(text)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.clicked.connect(connect)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setStyleSheet(f"""
+            QPushButton {{
+                font_size: {font_size}px;
+            }}
+""")
         if tooltip:
             add_tooltip(self, tooltip)
-        # self.setStyleSheet(f"""""")
+
+
+class WideButton(QPushButton):
+    def __init__(
+        self,
+        text: str,
+        connect: Callable | None = None,
+        tooltip: str | None = None,
+        font_size: int = 20,
+    ):
+        super().__init__(text)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.clicked.connect(connect)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setStyleSheet(f"""
+            QPushButton {{
+                font-size: {font_size}px;
+                font-weight: bold;
+                padding: 5px 40px 5px 40px;
+                border-radius: 5px;
+                border: 1px solid black;
+            }}
+
+            QPushButton::hover {{
+                background-color: {Colors.v_light_blue}
+            }}
+""")
+        if tooltip:
+            add_tooltip(self, tooltip)
 
 
 class LargeHeading(QLabel):
@@ -48,13 +93,16 @@ class MediumHeading(QLabel):
 
 
 class CorpusLabel(QLabel):
-    def __init__(self, text, color: tuple[int, int, int]) -> None:
+    def __init__(
+        self, text, color: tuple[int, int, int], text_color: str = "black"
+    ) -> None:
         super().__init__(text)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.setStyleSheet(f""" 
             QLabel {{
                 background-color: rgb{color};
+                color: {text_color};
                 border-radius: 5px;
-                margin: 0px;
             }}    """)
 
 
@@ -182,3 +230,99 @@ class FolderSelectButton(QPushButton):
         self.setStyleSheet("QPushButton {border: none;}")
         add_tooltip(self, tooltip)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+
+class CheckBox(QWidget):
+    def __init__(
+        self,
+        label_text,
+        connection: Callable | None = None,
+        tooltip: str = "",
+        font_size: int = 18,
+    ):
+        super().__init__()
+
+        # Create the QCheckBox
+        self.check_box = QCheckBox()
+
+        # Create the QLabel for the text
+        if len(label_text) > 50:
+            label_display_text = label_text[:50] + "..."
+        else:
+            label_display_text = label_text
+        self.label = QLabel(label_display_text)
+
+        # Set the font size for the label
+        self.label.setStyleSheet(f"font-size: {font_size}px;")
+
+        # Set the layout for this widget
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(5)
+        layout.addWidget(self.check_box)
+        layout.addWidget(self.label)
+        layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+
+        # Set the widget's layout
+        self.setLayout(layout)
+
+        # Set the cursor to a pointing hand on hover
+        self.check_box.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        # Connect to the provided callback if needed
+        if connection:
+            self.check_box.stateChanged.connect(connection)
+
+        # Custom styling for the checkbox
+        self.check_box.setStyleSheet(f"""  
+            QCheckBox {{
+                font-size: {font_size}px;  /* Font size for the checkbox */
+                spacing: 5px;
+            }}
+            QCheckBox::indicator {{
+                background-color: white;
+                width: 20px;     
+                height: 20px;  
+                border-radius: 5px;
+                border: 2px solid black;
+            }}
+            QCheckBox::indicator:checked {{
+                background-color: {Colors.med_blue};
+            }}
+        """)
+
+        tooltip = tooltip or label_text
+        add_tooltip(self, tooltip)
+
+
+class RadioButton(QRadioButton):
+    def __init__(self, label, connection: Callable | None = None, tooltip: str = ""):
+        super().__init__()
+        self.setText(str(label))
+        self.label = label
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        if connection:
+            self.toggled.connect(connection)
+        self.setStyleSheet(f"""  
+                QRadioButton {{
+                    font-size: 18px;  
+                    color: black;    
+                    spacing: 5px;   
+                }}
+                           
+                QRadioButton::indicator {{
+                    width: 20px;
+                    height: 20px;
+                    border: 2px solid black; /* Border for the indicator */
+                    border-radius: 12px; /* Ensure the indicator is circular */
+                    background-color: white; /* Default background */
+                    margin: 0px;
+                }}
+
+                QRadioButton::indicator:checked {{
+                    background-color: {Colors.med_blue}; /* Background color when checked */
+                }}
+
+            """)
+        if tooltip:
+            add_tooltip(self, tooltip)

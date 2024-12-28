@@ -59,7 +59,14 @@ class DocLabel(BaseModel):
                 f"<i>{k}</i>=<b>{v}</b>" for k, v in self.label_attrs.items()
             )
             label_attrs = f" {label_attrs}"
-            return f"&lt;<b>{self.label_name}</b>{label_attrs}&gt; in <b>XML</b> files"
+            value_in_attrs_str = ""
+            if self.type is LabelType.META:
+                value_in_attrs_str = "(Values in {})"
+                if self.value_in_attrs:
+                    value_in_attrs_str = value_in_attrs_str.format("attributes")
+                else:
+                    value_in_attrs_str = value_in_attrs_str.format("text content")
+            return f"&lt;<b>{self.label_name}</b>{label_attrs}&gt; in <b>XML</b> files {value_in_attrs_str}"
 
     def match_label(self, label: str | int | bool | frozendict) -> bool:
         """Checks if self matches label
