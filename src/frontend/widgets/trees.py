@@ -1,9 +1,9 @@
+from frozendict import frozendict
 from pathlib import Path
 from typing import Any, Callable
-import xml.etree.ElementTree as ET
 
 from PySide6.QtGui import QIcon
-from PySide6.QtCore import QTimer, Qt, qDebug
+from PySide6.QtCore import Qt, QTimer, qDebug
 from PySide6.QtWidgets import (
     QDialog,
     QFrame,
@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QWidgetAction,
 )
-from frozendict import frozendict
+
 
 from backend.corpus.items import DocLabel, Folder, LabelType
 from frontend.styles.colors import Colors, is_dark
@@ -27,6 +27,7 @@ from frontend.utils.functions import (
     change_style,
     clear_layout,
     make_corpus_item,
+    prune_object,
 )
 from frontend.widgets.dialogs import MakeDocLabel
 from frontend.widgets.small import CorpusLabel
@@ -143,6 +144,7 @@ class DocText(QWidget):
         super().__init__()
         layout = QHBoxLayout()
         self.label_text = text
+        self.doc_label_parent = False
         if type(index) is int:
             self.label_text = f"<b>[{index}]</b>\t{text}"
         self.label = QLabel(self.label_text)
@@ -153,7 +155,6 @@ class DocText(QWidget):
             padding: 5px;
             background-color: transparent;
             """)
-        # self.label.setStyleSheet("border: 2px solid transparent; padding: 5px;")
         layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         layout.addWidget(self.label)
         self.setLayout(layout)
@@ -268,6 +269,7 @@ class FolderViewer(QTreeWidget):
         self.setHeaderLabel(self.header_placeholder)
         self.path = None
         self.project.projectLoaded.connect(self.populate_tree)
+        self.project.corpusConfigUpdated.connect(self.check_populate_tree)
         self.project.projectLoaded.connect(self.tag_nodes_on_project_load)
         self.project.corpusConfigUpdated.connect(self.tag_nodes)
         self.folder_icon = Icons.folder_closed()
@@ -284,6 +286,12 @@ class FolderViewer(QTreeWidget):
         """)
 
         self.populate_tree()
+
+    def check_populate_tree(
+        self, prop_name: str, content: Any, remove: bool = False
+    ) -> None:
+        if prop_name == "corpus_path":
+            self.populate_tree(content)
 
     def populate_tree(self, path: Path | None = None):
         self.clear()
@@ -393,6 +401,7 @@ class DocViewer(QTreeWidget):
         self.project = project
         self.doc_data = doc_data
         self.project.corpusConfigUpdated.connect(self.tag_nodes)
+        self.project.projectLoaded.connect(self.clear_)
         self.header_placeholder = "Select text and meta labels here"
         self.setHeaderLabel(self.header_placeholder)
         self.setStyleSheet("""
@@ -407,32 +416,30 @@ class DocViewer(QTreeWidget):
         if doc_data and file_path:
             self.populate_tree(doc_data, file_path)
 
-    def populate_tree(self, data: dict[str, Any], file_path: Path):
+    def clear_(self):
         self.clear()
+        self.setHeaderLabel(self.header_placeholder)
+
+    def populate_tree(self, data: dict[str, Any], file_path: Path):
+        self.clear_()
         if data:
+            header_label = file_path.name
+            pruned_data = prune_object(data, 100)  # type: ignore
+            if pruned_data != data:
+                header_label = (
+                    f"{header_label} (File too large. Only a portion is shown.)"
+                )
+            self.setHeaderLabel(header_label)
             self.file_type = file_path.suffix
             self.context_menu.file_type = file_path.suffix  # type: ignore
-            self.setHeaderLabel(file_path.name)
-            self.add_node(self, data)
-        else:
-            self.setHeaderLabel(self.header_placeholder)
+
+            self.add_node(self, pruned_data)
         self.expandAll()
         self.tag_nodes_on_doc_load()
-
-    def tag_nodes_on_doc_load(self):
-        self.tag_nodes(
-            "text_labels",
-            self.project.corpus_config.get_text_labels(file_type=self.file_type),
-        )
-        self.tag_nodes(
-            "text_labels",
-            self.project.corpus_config.get_meta_labels(file_type=self.file_type),
-        )
 
     def add_node(self, parent, data: Any, level: int = 0):
         if isinstance(data, dict):
             for key, value in data.items():
-                # icon = QIcon("folder_icon_path")  # You can specify a folder icon here
                 widget = DocTreeNode(key, file_type=self.file_type)
                 tree_item = QTreeWidgetItem(parent)
                 self.setItemWidget(tree_item, 0, widget)
@@ -450,11 +457,41 @@ class DocViewer(QTreeWidget):
                 self.add_node(parent, item, level + 1)  # Recursively add list items
 
         else:
-            # icon = QIcon("file_icon_path")  # You can specify a file icon here
             widget = DocText(str(data))
             tree_item = QTreeWidgetItem(parent)
             self.setItemWidget(tree_item, 0, widget)
             tree_item.setData(0, 1, data)
+
+    def tag_nodes_on_doc_load(self):
+        self.tag_nodes(
+            "text_labels",
+            self.project.corpus_config.get_text_labels(file_type=self.file_type),
+        )
+        self.tag_nodes(
+            "text_labels",
+            self.project.corpus_config.get_meta_labels(file_type=self.file_type),
+        )
+
+    def check_for_tagged_text(self, tree_item: QTreeWidgetItem) -> bool | None:
+        widget = self.itemWidget(tree_item, 0)
+        if isinstance(widget, DocText):
+            qDebug(widget.label_text)
+            if widget.doc_label_parent:
+                return True
+        # if isinstance(widget, DocTreeNode):
+        # for label_type, parents in widget.doc_label_parents.items():
+        #     doc_labels = getattr(
+        #         self.project.corpus_config, f"{label_type.name.lower()}_labels"
+        #     )
+        #     for label_name, widget in parents.items():
+        #         doc_label = doc_labels[label_name]
+        #         if not doc_label.value_in_attrs:
+        #             return True
+
+        for row in range(tree_item.childCount()):
+            child = tree_item.child(row)
+            if self.check_for_tagged_text(child):
+                return True
 
     def tag_nodes(
         self,
@@ -511,18 +548,22 @@ class DocViewer(QTreeWidget):
         widget: DocTreeNode | DocText | None = self.itemWidget(node, 0)  # type: ignore
         if isinstance(widget, DocTreeNode):
             if target := filter_func(widget):
+                action_func(target, widget)
                 highlight_text = True
                 if isinstance(target, DocLabel):
-                    # highlight_color = target.color
-                    highlight_color = target.color + (75,)  # type: ignore
+                    if not target.value_in_attrs:
+                        highlight_color = target.color + (75,)  # type: ignore
+                    else:
+                        highlight_text = False
                 else:
                     highlight_color = None
-                action_func(target, widget)
 
         elif isinstance(widget, DocText) and highlight_text:
             if highlight_color:
+                widget.doc_label_parent = True  # type: ignore
                 change_style(widget.label, "background-color", f"rgba{highlight_color}")
             else:
+                widget.doc_label_parent = False  # type: ignore
                 change_style(widget.label, "background-color", "transparent")
 
         for i in range(node.childCount()):  # Iterate through child items
@@ -552,7 +593,10 @@ class TreeContextMenu(QMenu):
         self.widget_action = QWidgetAction(self)
 
     def add_actions(
-        self, data: Any, tree_widget: FolderTreeNode | DocTreeNode | DocText
+        self,
+        data: Any,
+        tree_item_widget: FolderTreeNode | DocTreeNode | DocText,
+        tagged_text_under_node: bool = False,
     ):
         clear_layout(self.actions_layout)
 
@@ -588,20 +632,23 @@ class TreeContextMenu(QMenu):
                     remove = True
 
             elif self.type == "doc":
-                if isinstance(tree_widget, DocTreeNode) and prop_name in (
+                if isinstance(tree_item_widget, DocTreeNode) and prop_name in (
                     "text_labels",
                     "meta_labels",
                 ):
                     label_type = (
                         LabelType.META if prop_name == "meta_labels" else LabelType.TEXT
                     )
-                    if d := tree_widget.doc_label_parents[label_type]:
+                    if d := tree_item_widget.doc_label_parents[label_type]:
                         remove = True
                         menu_item = list(d.keys())[0]
                         menu_item_name = menu_item
                     else:
-                        menu_item = tree_widget.key
-                        menu_item_name = tree_widget.label_d["label_name"]["name"]
+                        if tagged_text_under_node:
+                            if prop_name == "text_labels" or self.file_type != ".xml":
+                                continue
+                        menu_item = tree_item_widget.key
+                        menu_item_name = tree_item_widget.label_d["label_name"]["name"]
 
                 if not menu_item:
                     continue
@@ -629,6 +676,7 @@ class TreeContextMenu(QMenu):
                             menu_item_name,  # type: ignore
                             label_type,
                             file_type,  # type: ignore
+                            tagged_text_under_node,
                         )
                 else:
 
@@ -666,9 +714,16 @@ class TreeContextMenu(QMenu):
             QTimer.singleShot(0, self.close)
 
     def get_doc_label_action_func(
-        self, menu_item: Any, menu_item_name: str, label_type: LabelType, file_type: str
+        self,
+        menu_item: Any,
+        menu_item_name: str,
+        label_type: LabelType,
+        file_type: str,
+        tagged_text_under_node: bool = False,
     ):
-        dialog = MakeDocLabel(menu_item, menu_item_name, label_type, file_type)
+        dialog = MakeDocLabel(
+            menu_item, menu_item_name, label_type, file_type, tagged_text_under_node
+        )
         if dialog.exec() == QDialog.DialogCode.Accepted:
             doc_label = dialog.get_results()
             prop_name = "text_labels" if label_type is LabelType.TEXT else "meta_labels"

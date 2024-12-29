@@ -52,7 +52,12 @@ class MessageBox(QDialog):
 
 class MakeDocLabel(QDialog):
     def __init__(
-        self, key: Any, display_name: str, label_type: LabelType, file_type: str
+        self,
+        key: Any,
+        display_name: str,
+        label_type: LabelType,
+        file_type: str,
+        tagged_text_under_node: bool = False,
     ) -> None:
         super().__init__()
         self.setWindowTitle(f"Add to {label_type.name.lower()} labels")
@@ -146,7 +151,12 @@ class MakeDocLabel(QDialog):
             attrs_radio = RadioButton(
                 "attributes", lambda: self.toggle_attrs_in_values(True)
             )
-            text_radio.setChecked(True)
+            if tagged_text_under_node:
+                text_radio.setDisabled(True)
+                attrs_radio.setChecked(True)
+                # attrs_radio.setCheckable(False)
+            else:
+                text_radio.setChecked(True)
             radio_layout.addWidget(text_radio)
             radio_layout.addWidget(attrs_radio)
             layout.addWidget(value_location_frame)

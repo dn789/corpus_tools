@@ -114,11 +114,13 @@ class HScrollSection(QWidget):
 
         self.outer_layout.addWidget(scroll_wrapper)
 
-        self.placeholder_widget = QLabel(f"<i>{placeholder_text}</i>")
+        self.placeholder_widget = QLabel(f"{placeholder_text}")
+
         self.placeholder_widget.setSizePolicy(
             QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Maximum
         )
         self.placeholder_widget.setWordWrap(True)
+
         self.placeholder_widget.setStyleSheet("font-size: 16px;")
         self.placeholder_widget.hide()
         self.content_layout.addWidget(self.placeholder_widget)

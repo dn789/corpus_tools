@@ -1,9 +1,10 @@
 from pathlib import Path
 from typing import Callable
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFontMetrics, QPainter, QPixmap, QTextLayout
 from PySide6.QtWidgets import (
     QCheckBox,
+    QFileDialog,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -177,10 +178,11 @@ class SmallXButton(ImageButton):
 
 
 class FolderSelectWidget(QWidget):
+    folderSelected = Signal()
+
     def __init__(
         self,
         path: Path | None = None,
-        handle: Callable | None = None,
     ) -> None:
         super().__init__()
         self.setFixedHeight(50)
@@ -208,9 +210,20 @@ class FolderSelectWidget(QWidget):
         layout.addWidget(self.text_label)
 
         folder_select_button = FolderSelectButton()
-        if handle:
-            folder_select_button.clicked.connect(handle)
+        folder_select_button.clicked.connect(self.select_folder)
         layout.addWidget(folder_select_button)
+
+    def select_folder(self):
+        # Open a folder selection dialog
+        folder = QFileDialog.getExistingDirectory(
+            self, "Select Folder", str(self.path) if self.path else ""
+        )
+
+        # If a folder was selected, update the path and the label
+        if folder:
+            self.set_path(Path(folder))  # Update the path attribute and label
+            self.path = Path(folder)  # Store the selected path in the path attribute
+            self.folderSelected.emit()
 
     def set_path(self, path: str | Path | None = None):
         if not path:
@@ -321,6 +334,14 @@ class RadioButton(QRadioButton):
 
                 QRadioButton::indicator:checked {{
                     background-color: {Colors.med_blue}; /* Background color when checked */
+                }}
+
+                QRadioButton:disabled {{
+                   color: {Colors.gray}
+                }}
+                
+                QRadioButton::indicator:disabled {{
+                    background-color: {Colors.light_gray}; /* Background color when checked */
                 }}
 
             """)
