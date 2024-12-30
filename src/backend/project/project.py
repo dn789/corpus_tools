@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import shutil
+from typing import Any
 
 from backend.corpus.corpus import Corpus
 from backend.db.db import DatabaseManager
@@ -91,9 +92,13 @@ class Project:
             raise ValueError("No corpus config provided")
         self.corpus_processor = CorpusProcessor(self.corpus_config, self.db)  # type: ignore
 
-    def process_corpus(self, add_embeddings: bool = True) -> None:
+    def process_corpus(
+        self, add_embeddings: bool = True, frontend_connect: Any = None
+    ) -> None:
         self.load_corpus_processor(new_db=True)
-        self.corpus_processor.process_files(add_embeddings=add_embeddings)  # type: ignore
+        self.corpus_processor.process_files(
+            add_embeddings=add_embeddings, frontend_connect=frontend_connect
+        )  # type: ignore
         if not self.corpus_config:
             raise ValueError("No corpus config provided")
         self.corpus = Corpus(self.db, self.corpus_config, get_features=True)  # type: ignore

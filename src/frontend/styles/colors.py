@@ -14,6 +14,7 @@ class Colors:
     med_blue: str = "#406d99"
     light_blue: str = "#dff0f5"
     v_light_blue: str = "#edf5f7"
+    green: str = "#26b81c"
     light_gray: str = "#dcdfe0"
     gray: str = "gray"
     test_blue: str = "#3a7cbd"

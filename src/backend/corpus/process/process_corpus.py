@@ -50,10 +50,17 @@ class CorpusProcessor:
 
         self.sent_tokenizer = SentTokenizer()
 
-    def process_files(self, add_embeddings: bool = True) -> None:
-        for f in tqdm(list(self.corpus_path.rglob("*")), desc="Processing files"):  # type: ignore
+    def process_files(
+        self, add_embeddings: bool = True, frontend_connect: Any = None
+    ) -> None:
+        files = list(self.corpus_path.rglob("*"))  # type: ignore
+        if frontend_connect:
+            frontend_connect.taskInfo.emit("Processing files", len(files))
+        for f in tqdm(files, desc="Processing files"):
             if f.is_file() and self.file_ext_filter(f):
                 self.process_file(f)
+            if frontend_connect:
+                frontend_connect.increment.emit()
 
         if add_embeddings:
             self.add_embeddings()

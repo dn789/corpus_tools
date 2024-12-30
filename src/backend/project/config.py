@@ -91,12 +91,14 @@ class CorpusConfig(BaseSettings):
         label_name = meta_pro_ref["label_name"]
         name = meta_pro_ref["name"]
         value = meta_pro_ref["value"]
+        color = self.meta_labels[label_name].color
         meta_type = MetaType.QUANTITATIVE if is_quant(value) else MetaType.CATEGORICAL
         self.meta_properties.setdefault(label_name, {})
         self.meta_properties[label_name][name] = MetaProperty(
             name=name,
             label_name=label_name,
             type=meta_type,  # type: ignore
+            color=color,
         )
 
     def update_corpus_items(

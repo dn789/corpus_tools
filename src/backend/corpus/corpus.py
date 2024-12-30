@@ -22,4 +22,6 @@ class Corpus:
         self.config.text_categories = {}
         text_labels = self.config.get_text_labels()
         for t_l in text_labels:
-            self.config.text_categories[t_l.name] = TextCategory(name=t_l.name)
+            self.config.text_categories[t_l.name] = TextCategory(
+                name=t_l.name, color=t_l.color
+            )

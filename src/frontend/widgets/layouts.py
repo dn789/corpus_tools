@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QSizePolicy,
     QSplitter,
+    QStackedLayout,
     QVBoxLayout,
     QWidget,
     QScrollArea,
@@ -126,7 +127,7 @@ class MainColumn(QWidget):
     def add_widget(self, widget: QWidget) -> None:
         self.content_layout.addWidget(widget)
 
-    def add_layout(self, layout: QVBoxLayout | QHBoxLayout) -> None:
+    def add_layout(self, layout: QVBoxLayout | QHBoxLayout | QStackedLayout) -> None:
         self.content_layout.addLayout(layout)
 
 
