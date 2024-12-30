@@ -1,8 +1,6 @@
 from pathlib import Path
 
 from PySide6.QtWidgets import (
-    QPushButton,
-    QSplitter,
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
@@ -15,84 +13,13 @@ from PySide6.QtCore import Qt, qDebug
 from backend.corpus.process.process_doc import file_to_doc
 from backend.corpus.items import DocLabel, CorpusItem, Folder
 from frontend.project import ProjectWrapper as Project
-from frontend.widgets.layouts import HScrollSection, MainColumn, Splitter
+from frontend.widgets.layouts import HScrollSection, MainColumn, VSplitter
 from frontend.widgets.small import (
     CorpusTag,
     FolderSelectWidget,
-    LargeHeading,
     MediumHeading,
 )
 from frontend.widgets.trees import FolderViewer, DocViewer, TreeContextMenu
-
-
-class CorpusConfigTabOld(QWidget):
-    def __init__(self, project: Project):
-        super().__init__()
-        self.project = project
-        self.project.projectLoaded.connect(self.load_config)
-
-        main_layout = QHBoxLayout()
-        self.config_view = CorpusConfigView(self.project)
-        tree_splitter = Splitter(orientation=Qt.Orientation.Vertical)
-
-        # FolderViewer
-        folder_widget_wrapper = QWidget()
-        folder_widget_layout = QVBoxLayout()
-        folder_widget_layout.addWidget(LargeHeading("Files"))
-        self.folder_widget = FolderViewer(self.project)
-        folder_widget_layout.addWidget(self.folder_widget)
-        folder_widget_wrapper.setLayout(folder_widget_layout)
-        tree_splitter.addWidget(folder_widget_wrapper)
-
-        doc_widget_wrapper = QWidget()
-        doc_widget_layout = QVBoxLayout()
-        doc_widget_layout.addWidget(LargeHeading("Document"))
-        self.doc_widget = DocViewer(self.project)
-        doc_widget_layout.addWidget(self.doc_widget)
-        doc_widget_wrapper.setLayout(doc_widget_layout)
-        tree_splitter.addWidget(doc_widget_wrapper)
-
-        self.folder_widget.itemDoubleClicked.connect(self.display_doc)
-
-        main_layout.addWidget(self.config_view)
-        main_layout.addWidget(tree_splitter)
-        self.setLayout(main_layout)
-
-        for widget in (self.folder_widget, self.doc_widget):
-            widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-            widget.context_menu = TreeContextMenu(  # type: ignore
-                widget, self.project
-            )
-            widget.customContextMenuRequested.connect(
-                lambda pos, widget=widget: self.show_context_menu(pos, widget)
-            )
-
-        self.load_config()
-
-    def load_config(self):
-        self.config_view.load_config()
-
-    def show_context_menu(self, pos, widget):
-        tagged_text_under_node = False
-        tree_item = widget.itemAt(pos)
-        if tree_item:
-            data = tree_item.data(0, 1)
-            tree_item_widget = widget.itemWidget(tree_item, 0)
-            if isinstance(widget, DocViewer):
-                tagged_text_under_node = widget.check_for_tagged_text(tree_item)
-            widget.context_menu.add_actions(  # type: ignore
-                data, tree_item_widget, tagged_text_under_node
-            )
-            widget.context_menu.show(pos)  # type: ignore
-
-    def display_doc(self, item: QTreeWidgetItem) -> None:
-        item_path = Path(item.data(0, 1))
-        if item_path.is_file():
-            try:
-                doc = file_to_doc(item_path)
-                self.doc_widget.populate_tree(doc, item_path)  # type: ignore
-            except NotImplementedError:
-                pass
 
 
 class CorpusConfigTab(QWidget):
@@ -103,37 +30,14 @@ class CorpusConfigTab(QWidget):
 
         main_layout = QHBoxLayout()
         self.config_view = CorpusConfigView(self.project)
-        self.tree_splitter = Splitter(orientation=Qt.Orientation.Vertical)
+        self.tree_splitter = VSplitter(orientation=Qt.Orientation.Vertical)
 
         # FolderViewer
-        folder_widget_wrapper = QWidget()
-        folder_widget_layout = QVBoxLayout()
-        folder_widget_layout.addWidget(LargeHeading("Files"))
-
         self.folder_widget = FolderViewer(self.project)
-        folder_widget_layout.addWidget(self.folder_widget)
-
-        self.folder_toggle_button = QPushButton("Expand")
-        self.folder_toggle_button.clicked.connect(self.toggle_folder_widget)
-        folder_widget_layout.addWidget(self.folder_toggle_button)
-
-        folder_widget_wrapper.setLayout(folder_widget_layout)
-        self.tree_splitter.addWidget(folder_widget_wrapper)
-
-        # DocViewer
-        doc_widget_wrapper = QWidget()
-        doc_widget_layout = QVBoxLayout()
-        doc_widget_layout.addWidget(LargeHeading("Document"))
+        self.tree_splitter.add_widget("Files", self.folder_widget)
 
         self.doc_widget = DocViewer(self.project)
-        doc_widget_layout.addWidget(self.doc_widget)
-
-        self.doc_toggle_button = QPushButton("Expand")
-        self.doc_toggle_button.clicked.connect(self.toggle_doc_widget)
-        doc_widget_layout.addWidget(self.doc_toggle_button)
-
-        doc_widget_wrapper.setLayout(doc_widget_layout)
-        self.tree_splitter.addWidget(doc_widget_wrapper)
+        self.tree_splitter.add_widget("Document", self.doc_widget)
 
         self.folder_widget.itemDoubleClicked.connect(self.display_doc)
 
@@ -176,30 +80,7 @@ class CorpusConfigTab(QWidget):
                 self.doc_widget.populate_tree(doc, item_path)  # type: ignore
             except NotImplementedError:
                 pass
-
-    def toggle_folder_widget(self):
-        """Toggle the visibility of the folder widget."""
-        self.adjust_splitter("folder")
-
-    def toggle_doc_widget(self):
-        self.adjust_splitter("doc")
-
-    def adjust_splitter(self, widget_to_expand_name):
-        """Adjust the splitter to minimize/maximize the widgets."""
-        if widget_to_expand_name == "doc":
-            self.tree_splitter.setSizes(
-                [
-                    30,
-                    self.tree_splitter.height() - 30,
-                ]
-            )
-        else:
-            self.tree_splitter.setSizes(
-                [
-                    self.tree_splitter.height() - 30,
-                    30,
-                ]
-            )
+        self.tree_splitter.show_bottom()
 
 
 class CorpusConfigView(MainColumn):

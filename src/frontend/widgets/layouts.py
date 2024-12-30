@@ -11,10 +11,10 @@ from PySide6.QtWidgets import (
 )
 
 from frontend.styles.colors import Colors
-from frontend.widgets.small import LargeHeading, MediumHeading
+from frontend.widgets.small import ArrowButton, LargeHeading, MediumHeading
 
 
-class Splitter(QSplitter):
+class VSplitter(QSplitter):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.setHandleWidth(15)
@@ -25,6 +25,84 @@ class Splitter(QSplitter):
                 background-color: {Colors.v_light_blue};
             }}
         """)
+        self.view_buttons = []
+        self.widgets = []
+        self.widget_index = 0
+        self.splitterMoved.connect(self.set_widgets_visible)
+
+    def add_widget(self, heading: str, widget: QWidget) -> None:
+        self.widgets.append(widget)
+
+        heading_layout = QHBoxLayout()
+        heading_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        widget_layout = QVBoxLayout()
+        widget_layout.addLayout(heading_layout)
+        widget_layout.addWidget(widget)
+
+        heading_layout.addWidget(LargeHeading(heading))
+        down = not self.widget_index
+        view_button = ArrowButton(down=down)
+        self.view_buttons.append(view_button)
+        view_button.clicked.connect(
+            lambda _, index=self.widget_index: self.adjust_splitter(index)
+        )
+        heading_layout.addWidget(view_button)
+
+        wrapper = QWidget()
+        wrapper.setLayout(widget_layout)
+        self.addWidget(wrapper)
+
+        self.widget_index += 1
+
+    def adjust_splitter(self, index: int) -> None:
+        if self.widgets[index].isVisible():
+            if self.widgets[abs(index - 1)].isVisible():
+                if index:
+                    self.splitter_up()
+                else:
+                    self.splitter_down()
+            else:
+                if index:
+                    self.splitter_down()
+                else:
+                    self.splitter_up()
+
+        else:
+            if not index:
+                self.splitter_down()
+            else:
+                self.splitter_up()
+
+    def splitter_down(self) -> None:
+        self.widgets[0].setVisible(True)
+        self.widgets[1].setVisible(False)
+        self.view_buttons[0].up()
+        self.view_buttons[1].up()
+        expand_height = self.height() - 50
+        collapse_height = 50
+        self.setSizes([expand_height, collapse_height])
+
+    def splitter_up(self) -> None:
+        self.widgets[0].setVisible(False)
+        self.widgets[1].setVisible(True)
+        self.view_buttons[0].down()
+        self.view_buttons[1].down()
+        expand_height = self.height() - 50
+        collapse_height = 50
+        self.setSizes([collapse_height, expand_height])
+
+    def set_widgets_visible(self) -> None:
+        self.view_buttons[0].down()
+        self.view_buttons[1].up()
+        for widget in self.widgets:
+            widget.setVisible(True)
+
+    def show_bottom(self) -> None:
+        if not self.widgets[1].height() or not self.widgets[1].isVisible():
+            self.widgets[0].setVisible(True)
+            self.widgets[1].setVisible(True)
+            half_height = int(self.height() / 2)
+            self.setSizes([half_height, half_height])
 
 
 class MainColumn(QWidget):

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable
 
 from PySide6.QtWidgets import QApplication, QStyle
@@ -8,7 +9,9 @@ from PySide6.QtGui import QIcon, QPixmap, QPainter
 
 @dataclass
 class Icons:
-    x: str = "./frontend/icons/x.svg"
+    arrow_up: Path = Path("./frontend/icons/arrow_up.svg")
+    arrow_down: Path = Path("./frontend/icons/arrow_down.svg")
+    x: Path = Path("./frontend/icons/x.svg")
     folder_open: Callable = lambda: QApplication.style().standardIcon(  # type: ignore
         QStyle.StandardPixmap.SP_DirOpenIcon
     )

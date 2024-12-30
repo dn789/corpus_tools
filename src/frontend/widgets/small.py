@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Callable
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFontMetrics, QPainter, QPixmap, QTextLayout
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
     QFileDialog,
@@ -33,7 +33,7 @@ class Button(QPushButton):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setStyleSheet(f"""
             QPushButton {{
-                font_size: {font_size}px;
+                font-size: {font_size}px;
             }}
 """)
         if tooltip:
@@ -138,27 +138,12 @@ class CorpusTag(QWidget):
 
 
 class ImageButton(QPushButton):
-    def __init__(self, image_path, icon_size=(20, 20), tooltip: str = ""):
+    def __init__(
+        self, image_path, icon_size: tuple[int, int] = (20, 20), tooltip: str = ""
+    ):
         super().__init__()
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        # Load the image as a QPixmap
-        pixmap = QPixmap(image_path)
-
-        # Scale the pixmap to the desired icon size
-        scaled_pixmap = pixmap.scaled(
-            icon_size[0],
-            icon_size[1],
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation,
-        )
-
-        # Set the scaled image as the button icon
-        self.setIcon(scaled_pixmap)
-
-        # Set the icon size to the scaled size
-        self.setIconSize(scaled_pixmap.size())
-
-        # Remove text and borders
+        self.set_icon(image_path, icon_size)
         self.setText("")  # Ensure no text is displayed
         self.setStyleSheet("""
             QPushButton {
@@ -167,14 +152,41 @@ class ImageButton(QPushButton):
                 padding: 0px; 
             }
             """)
-        add_tooltip(self, tooltip)
+        if tooltip:
+            add_tooltip(self, tooltip)
         # Make button flat (no visual border effects)
         self.setFlat(True)
+
+    def set_icon(self, image_path: Path, icon_size: tuple[int, int] = (20, 20)) -> None:
+        pixmap = QPixmap(image_path)
+
+        scaled_pixmap = pixmap.scaled(
+            icon_size[0],
+            icon_size[1],
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+
+        self.setIcon(scaled_pixmap)
+
+        self.setIconSize(scaled_pixmap.size())
 
 
 class SmallXButton(ImageButton):
     def __init__(self, tooltip: str = ""):
         super().__init__(Icons.x, tooltip=tooltip)
+
+
+class ArrowButton(ImageButton):
+    def __init__(self, tooltip: str = "", down: bool = False):
+        icon = Icons.arrow_down if down else Icons.arrow_up
+        super().__init__(icon, tooltip=tooltip)
+
+    def up(self):
+        self.set_icon(Icons.arrow_up)
+
+    def down(self):
+        self.set_icon(Icons.arrow_down)
 
 
 class FolderSelectWidget(QWidget):
