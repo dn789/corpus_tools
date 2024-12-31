@@ -1,7 +1,9 @@
 from PySide6.QtWidgets import QWidget, QTabWidget, QMainWindow
 
 from frontend.project import ProjectWrapper
+from frontend.tabs.basic_analysis import BasicAnalysisWidget
 from frontend.tabs.config_corpus import CorpusConfigTab
+from frontend.tabs.overview import Overview
 from frontend.widgets.menu_bar import MenuBar
 from frontend.styles.colors import Colors
 
@@ -11,7 +13,6 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.project = project
         self.setWindowTitle("Corpus Analysis")
-        self.setMinimumHeight(1000)
         central_widget = MainTabWidget(self.project)
         self.setCentralWidget(central_widget)
         self.setMenuBar(MenuBar(self, self.project))
@@ -27,8 +28,8 @@ class MainTabWidget(QTabWidget):
 
         self.tabs_dict = {
             "Configure Corpus": corpus_config_tab,
-            "Overview": QWidget(),
-            "Basic Analysis": QWidget(),
+            "Overview": Overview(self.project),
+            "Basic Analysis": BasicAnalysisWidget(self.project),
             "Plot": QWidget(),
             "Search": QWidget(),
         }
@@ -51,7 +52,7 @@ class MainTabWidget(QTabWidget):
 
         for tab_name, widget in self.tabs_dict.items():
             self.addTab(widget, tab_name)
-        self.tabBar().setCurrentIndex(0)
+        self.tabBar().setCurrentIndex(1)
 
     def tab_change(self, index: int) -> None:
         self.tabBar().setCurrentIndex(index)

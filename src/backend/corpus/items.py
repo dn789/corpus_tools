@@ -23,6 +23,8 @@ class Folder(BaseModel):
     color: tuple[int, int, int]
     path: Path
     name: Optional[str] = None
+    sent_count: Optional[int] = None
+    word_count: Optional[int] = None
 
     @model_validator(mode="after")
     def set_display_name(cls, values):
@@ -104,6 +106,8 @@ class TextCategory(BaseModel):
     # Same as corresponding DocLabel
     name: str
     color: tuple[int, int, int]
+    sent_count: Optional[int] = None
+    word_count: Optional[int] = None
 
 
 class MetaProperty(BaseModel):

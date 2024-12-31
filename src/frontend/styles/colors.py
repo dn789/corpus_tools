@@ -16,6 +16,7 @@ class Colors:
     v_light_blue: str = "#edf5f7"
     green: str = "#26b81c"
     light_gray: str = "#dcdfe0"
+    light_tan: str = "#f7f5d7"
     gray: str = "gray"
     test_blue: str = "#3a7cbd"
 

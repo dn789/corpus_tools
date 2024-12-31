@@ -1,3 +1,4 @@
+from typing import Any
 from PySide6.QtCore import Qt, qDebug
 from PySide6.QtWidgets import (
     QFrame,
@@ -12,7 +13,12 @@ from PySide6.QtWidgets import (
 )
 
 from frontend.styles.colors import Colors
-from frontend.widgets.small import ArrowButton, LargeHeading, MediumHeading
+from frontend.widgets.small import (
+    ArrowButton,
+    DropDownMenu,
+    LargeHeading,
+    MediumHeading,
+)
 
 
 class VSplitter(QSplitter):
@@ -139,6 +145,8 @@ class HScrollSection(QWidget):
         background_color: str = Colors.light_blue,
         show_content_count: bool = True,
         placeholder_text: str = "None",
+        large: bool = False,
+        content_spacing: int = 5,
     ):
         super().__init__()
         # Content reference
@@ -148,12 +156,19 @@ class HScrollSection(QWidget):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.outer_layout = QVBoxLayout()
         self.setLayout(self.outer_layout)
-
         # Heading with content count
         heading_layout = QHBoxLayout()
         heading_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        heading = MediumHeading(heading_text)
-        self.content_count = MediumHeading("()")
+        if large:
+            heading = LargeHeading(
+                heading_text, font_style="italic", alignment=Qt.AlignmentFlag.AlignLeft
+            )
+            self.content_count = LargeHeading(
+                "()", font_style="italic", alignment=Qt.AlignmentFlag.AlignLeft
+            )
+        else:
+            heading = MediumHeading(heading_text)
+            self.content_count = MediumHeading("()")
         if not show_content_count:
             self.content_count.hide()
         heading_layout.addWidget(heading)
@@ -164,7 +179,7 @@ class HScrollSection(QWidget):
         self.content_layout = QHBoxLayout()
         self.content_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
-        self.content_layout.setSpacing(5)
+        self.content_layout.setSpacing(content_spacing)
         content_widget = QWidget()
         content_widget.setLayout(self.content_layout)
         # Scroll area
@@ -261,3 +276,66 @@ class ColumnScrollArea(QScrollArea):
         content_widget.layout().setAlignment(Qt.AlignmentFlag.AlignTop)  # type: ignore
         self.setWidget(content_widget)
         self.main_widget = content_widget
+
+
+class KeyValueTable(QFrame):
+    def __init__(self, data: dict[str, Any]):
+        super().__init__()
+        self.setStyleSheet(f"""
+            font-size: 18px;
+            border-radius: 5px;
+            padding: 5px;
+            background-color: {Colors.light_tan};
+""")
+        main_layout = QHBoxLayout()
+        key_layout = QVBoxLayout()
+        value_layout = QVBoxLayout()
+        self.setLayout(main_layout)
+        main_layout.addLayout(key_layout)
+        main_layout.addLayout(value_layout)
+        for k, v in data.items():
+            key_layout.addWidget(
+                QLabel(f"<i>{k}</i>"), alignment=Qt.AlignmentFlag.AlignRight
+            )
+            if isinstance(v, set):
+                drop_down = DropDownMenu()
+                for item in v:
+                    drop_down.addItem(item)
+                value_layout.addWidget(drop_down)
+            else:
+                value_layout.addWidget(QLabel(f"<b>{v}</b>"))
+
+
+class SmallHScrollArea(QFrame):
+    def __init__(self) -> None:
+        super().__init__()
+        self.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding
+        )
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        layout = QVBoxLayout()
+        layout.addWidget(scroll_area)
+        layout.setContentsMargins(0, 0, 0, 0)
+        content_widget = QWidget()
+        content_widget.setObjectName("ContentScrollArea")
+        self.content_layout = QVBoxLayout()
+        self.content_layout.setContentsMargins(0, 0, 0, 0)
+        self.content_layout.setSpacing(0)
+        content_widget.setLayout(self.content_layout)
+        scroll_area.setWidget(content_widget)
+        self.setLayout(layout)
+        self.setStyleSheet(f"""
+            QFrame {{ 
+                border-radius: 5px; 
+                background-color: white;
+            }}
+
+            QFrame QWidget#ContentScrollArea {{
+                background-color: white;
+            }}
+
+        """)  # noqa: F541
+
+    def add_widget(self, widget) -> None:
+        self.content_layout.addWidget(widget)

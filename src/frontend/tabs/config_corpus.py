@@ -225,6 +225,7 @@ class CorpusConfigView(MainColumn):
         self.progress_widget.complete()
         self.process_corpus_widget.setCurrentWidget(self.processing_complete_widget)
         self.process_corpus_button.setEnabled(True)
+        self.project.corpusProcessed.emit()
 
     def new_project_from_corpus_path(self):
         self.project.new_project()

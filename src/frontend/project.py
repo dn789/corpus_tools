@@ -11,6 +11,7 @@ class ProjectWrapper(Project, QWidget):
     projectSaved = Signal()
     configSaved = Signal()
     corpusConfigUpdated = Signal(str, object, bool)
+    corpusProcessed = Signal()
 
     def __init__(
         self, default_config_path: Path, project_folder: Path | None = None
