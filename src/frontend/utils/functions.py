@@ -1,6 +1,6 @@
 from typing import Any
 from PySide6.QtCore import qDebug
-from PySide6.QtWidgets import QLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QLayout, QVBoxLayout, QWidget
 
 from frontend.styles.colors import random_color_rgb
 
@@ -58,3 +58,13 @@ def prune_object(obj, max_keys):
     else:
         # If it's neither a dictionary nor a list, return the object as-is
         return obj
+
+
+def get_widgets(layout: QVBoxLayout | QHBoxLayout) -> list[QWidget]:
+    widgets = []
+    for i in range(layout.count()):
+        item = layout.itemAt(i)
+        if item.widget():
+            sub_widget = item.widget()
+            widgets.append(sub_widget)
+    return widgets

@@ -65,7 +65,16 @@ class CorpusOverviewItem(QWidget):
         info_layout = QVBoxLayout()
         layout.addLayout(info_layout)
         if isinstance(item, (Folder, TextCategory)):
-            data = {"Sentence count": item.sent_count, "Word count": item.word_count}
+            mlu = (
+                round(item.word_count / item.sent_count, 2)
+                if item.sent_count and item.word_count
+                else None
+            )
+            data = {
+                "Sentence count": item.sent_count,
+                "Word count": item.word_count,
+                "MLU": mlu,
+            }
             info_layout.addWidget(KeyValueTable(data))
         elif isinstance(item, MetaProperty):
             data = {

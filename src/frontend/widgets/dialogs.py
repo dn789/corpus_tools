@@ -63,7 +63,6 @@ class MakeDocLabel(QDialog):
         self.setWindowTitle(f"Add to {label_type.name.lower()} labels")
         self.setFixedWidth(500)
         self.setContentsMargins(15, 15, 15, 15)
-        # self.setFixedSize(400, 300)
         layout = QVBoxLayout()
         layout.setSpacing(20)
         self.setLayout(layout)

@@ -1,14 +1,15 @@
 from PySide6.QtCore import qDebug
-from PySide6.QtWidgets import QFrame, QLabel, QVBoxLayout, QWidget
-from backend.corpus.items import MetaProperty, MetaType
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QWidget
+from frozendict import frozendict
+from backend.corpus.items import MetaType
 from frontend.project import ProjectWrapper as Project
-from frontend.styles.colors import Colors
-from frontend.widgets.layouts import HScrollSection, MainColumn, SmallHScrollArea
+from frontend.styles.colors import Colors, random_color_rgb
+from frontend.utils.functions import get_widgets
+from frontend.widgets.layouts import HScrollSection, MainColumn
 from frontend.widgets.small import (
     Button,
     CheckBox,
     CorpusLabel,
-    DropDownMenu,
     MetaPropFilter,
     MetaPropertySelection,
 )
@@ -19,7 +20,7 @@ class CorpusSelectionWidget(MainColumn):
         super().__init__("Corpus Selection")
         self.project = project
         self.content_ref = {}
-        self.selection = {}
+        self.selections = {}
         self.project.projectLoaded.connect(self.add_widgets)
         self.display = CorpusSelectionDisplay()
         self.add_widgets()
@@ -35,8 +36,9 @@ class CorpusSelectionWidget(MainColumn):
         add_filter_button_layout.addWidget(self.add_filter_button)
         self.add_filter_button.setDisabled(True)
         self.content_layout.addLayout(add_filter_button_layout)
-        self.filter_frame = SmallHScrollArea()
-        self.content_layout.addWidget(self.filter_frame)
+        self.filter_layout = QVBoxLayout()
+        self.filter_layout.setContentsMargins(10, 0, 10, 0)
+        self.content_layout.addLayout(self.filter_layout)
 
         # Selection display
         self.content_layout.addWidget(self.display)  # type: ignore
@@ -63,10 +65,12 @@ class CorpusSelectionWidget(MainColumn):
                     )
             if not data:
                 continue
+            if prop_name == "meta_properties":
+                heading_text = "Add meta property filters"
+            else:
+                heading_text = self.project.corpus_config.get_display_name(prop_name)
             widget = HScrollSection(
-                self.project.corpus_config.get_display_name(prop_name),
-                data,
-                content_spacing=20,
+                heading_text, data, content_spacing=20, show_content_count=False
             )
             self.content_ref[prop_name] = widget
             self.add_widget(widget)
@@ -81,32 +85,42 @@ class CorpusSelectionWidget(MainColumn):
             self.add_filter_button.setDisabled(True)
 
     def add_filter(self) -> None:
-        filter_d = {}
+        filter_l = []
         for checkbox in self.content_ref["meta_properties"].content_ref.values():
             if checkbox.is_checked():
-                qDebug("checkbox")
+                sub_filter_d = {}
                 item = checkbox.item
                 meta_prop = item.meta_prop
-                id = (meta_prop.label_name, meta_prop.name)
-                filter_d[id] = {"meta_prop": meta_prop}
+                sub_filter_d["label_name"] = meta_prop.label_name
+                sub_filter_d["name"] = meta_prop.name
+                sub_filter_d["meta_prop"] = meta_prop
                 if meta_prop.type is MetaType.CATEGORICAL:
-                    filter_d[id]["value"] = item.cat_select.currentText()
+                    sub_filter_d["value"] = item.cat_select.currentText()
                 else:
                     min_, max_ = item.min_max_select.get_values()
-                    filter_d[id]["value"] = {"min": min_, "max": max_}
+                    sub_filter_d.update({"min": min_, "max": max_})
+                filter_l.append(sub_filter_d)
                 checkbox.uncheck()
-        def remove_handle():
-            
-        self.filter_frame.add_widget(MetaPropFilter(filter_d))
+
+        def remove_filter():
+            filter_widget.setParent(None)
+            filter_widget.deleteLater()
+            self.update_selection()
+
+        filter_widget = MetaPropFilter(filter_l, remove_filter)
+
+        self.filter_layout.addWidget(filter_widget)
+        self.update_selection()
 
     def update_selection(self):
-        for prop_name in ("subfolders", "text_categories", "meta_properties"):
-            self.selection[prop_name] = [
+        for prop_name in ("subfolders", "text_categories"):
+            self.selections[prop_name] = [
                 checkbox.label
                 for name, checkbox in self.content_ref[prop_name].content_ref.items()
                 if checkbox.is_checked()
             ]
-        self.display.populate(self.selection)
+        self.selections["meta_prop_filters"] = get_widgets(self.filter_layout)
+        self.display.populate(self.selections)
 
 
 class CorpusSelectionDisplay(HScrollSection):
@@ -122,23 +136,42 @@ class CorpusSelectionDisplay(HScrollSection):
 
     def populate(self, selection: dict[str, list[CorpusLabel]]):
         self.clear()
-        qDebug(str(selection))
         content = {}
         for i1, subfolder_item in enumerate(selection["subfolders"] or [None]):
             for i2, text_cat_item in enumerate(selection["text_categories"] or [None]):
-                for i3, meta_prop_item in enumerate(
-                    selection["meta_properties"] or [None]
+                for i3, meta_prop_filter in enumerate(
+                    selection["meta_prop_filters"] or [None]
                 ):
-                    selection_frame = QFrame()
-                    selection_layout = QVBoxLayout()
-                    selection_frame.setLayout(selection_layout)
+                    selection_frame = SelectionFrame()
                     if subfolder_item:
-                        selection_layout.addWidget(subfolder_item.get_copy())
+                        selection_frame.add_widget(subfolder_item.get_copy())
                     if text_cat_item:
-                        selection_layout.addWidget(text_cat_item.get_copy())
-                    if meta_prop_item:
-                        selection_layout.addWidget(meta_prop_item.get_copy())
+                        selection_frame.add_widget(text_cat_item.get_copy())
+                    if meta_prop_filter:
+                        widget = CorpusLabel(
+                            text=f"filter {i3 + 1}",
+                            color=meta_prop_filter.color,
+                            tooltip=meta_prop_filter.toolTip(),
+                        )
+                        selection_frame.add_widget(widget)
                     content[(i1, i2, i3)] = selection_frame
         self.add_content(content)
         if not any(v for v in selection.values()):
-            self.placeholder_widget.show()
+            self.clear()
+
+
+class SelectionFrame(QFrame):
+    def __init__(self) -> None:
+        super().__init__()
+        self.main_layout = QVBoxLayout()
+        self.setLayout(self.main_layout)
+        self.setStyleSheet(f"""
+            QFrame {{
+                border-radius: 5px;
+                background-color: {Colors.light_tan};          
+            }}
+
+    """)
+
+    def add_widget(self, widget: QWidget) -> None:
+        self.main_layout.addWidget(widget)

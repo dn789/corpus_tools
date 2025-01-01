@@ -222,7 +222,6 @@ class HScrollSection(QWidget):
 
     def add_content(self, content: dict[str, QWidget]) -> None:
         for key, widget in content.items():
-            # qDebug("adding")
             self.content_ref[key] = widget
             self.content_layout.addWidget(widget)
         if self.content_ref:
@@ -241,12 +240,11 @@ class HScrollSection(QWidget):
 
     def clear(self) -> None:
         for key, widget in self.content_ref.items():
-            # qDebug(str(key))
-            # qDebug(str(widget))
-            # qDebug("\n---------------\n")
             self.content_layout.removeWidget(widget)
             widget.deleteLater()
         self.content_ref = {}
+        self.content_count.setText(f"({len(self.content_ref)})")
+        self.placeholder_widget.show()
 
 
 class ColumnScrollArea(QScrollArea):
@@ -304,38 +302,3 @@ class KeyValueTable(QFrame):
                 value_layout.addWidget(drop_down)
             else:
                 value_layout.addWidget(QLabel(f"<b>{v}</b>"))
-
-
-class SmallHScrollArea(QFrame):
-    def __init__(self) -> None:
-        super().__init__()
-        self.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding
-        )
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        layout = QVBoxLayout()
-        layout.addWidget(scroll_area)
-        layout.setContentsMargins(0, 0, 0, 0)
-        content_widget = QWidget()
-        content_widget.setObjectName("ContentScrollArea")
-        self.content_layout = QVBoxLayout()
-        self.content_layout.setContentsMargins(0, 0, 0, 0)
-        self.content_layout.setSpacing(0)
-        content_widget.setLayout(self.content_layout)
-        scroll_area.setWidget(content_widget)
-        self.setLayout(layout)
-        self.setStyleSheet(f"""
-            QFrame {{ 
-                border-radius: 5px; 
-                background-color: white;
-            }}
-
-            QFrame QWidget#ContentScrollArea {{
-                background-color: white;
-            }}
-
-        """)  # noqa: F541
-
-    def add_widget(self, widget) -> None:
-        self.content_layout.addWidget(widget)

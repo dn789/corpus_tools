@@ -240,6 +240,123 @@ class DatabaseManager:
             "value": row["value"],
         }
 
+    def get_sents(
+        self,
+        named_subfolder: list[str] | str | None = None,
+        file_path: Path | list[Path] | None = None,
+        text_category: list[str] | str | None = None,
+        meta_property: dict[str, Any] | list[dict[str, Any]] | None = None,
+        include_embeddings: bool = False,
+        include_meta_properties: bool = True,
+    ) -> dict[str, Any]:
+        """
+        Retrieves sentences based on any combination of filters: named_subfolder, file_path, text_category, and meta_property.
+        Args:
+            named_subfolder (list[str] | str, optional): Filter by subfolder(s). Defaults to None.
+            file_path (list[Path] | Path, optional): Filter by file path(s). Defaults to None.
+            text_category (list[str] | str, optional): Filter by text category(ies). Defaults to None.
+            meta_property (dict[str, Any], optional): Filter by meta property (e.g., label_name, name, value). Defaults to None.
+            include_embeddings (bool, optional): Whether to include embeddings in the results. Defaults to False.
+            include_meta_properties (bool, optional): Whether to include meta properties in the results. Defaults to True.
+
+        Returns:
+            dict[str, Any]: A dictionary containing 'sent_dicts' (list of sentences) and 'meta_properties' (if requested).
+        """
+        # Build query and parameters
+        query = """
+            SELECT s.id, s.sentence, s.file_path, s.embedding, s.group_id
+            FROM sentences s
+            """
+        query_params = []
+        joins = []
+        conditions = []
+
+        # Handle named_subfolder filtering
+        if named_subfolder:
+            if isinstance(named_subfolder, str):
+                named_subfolder = [named_subfolder]
+            placeholders = ",".join(["?"] * len(named_subfolder))
+            joins.append("JOIN subfolders sf ON s.file_path = sf.file_path")
+            conditions.append(f"sf.subfolder IN ({placeholders})")
+            query_params.extend(named_subfolder)
+
+        # Handle file_path filtering
+        if file_path:
+            if isinstance(file_path, Path):
+                file_path = [file_path]
+            placeholders = ",".join(["?"] * len(file_path))
+            conditions.append(f"s.file_path IN ({placeholders})")
+            query_params.extend(str(p) for p in file_path)
+
+        # Handle text_category filtering
+        if text_category:
+            if isinstance(text_category, str):
+                text_category = [text_category]
+            placeholders = ",".join(["?"] * len(text_category))
+            joins.append("JOIN text_categories tc ON s.id = tc.sentence_id")
+            conditions.append(f"tc.name IN ({placeholders})")
+            query_params.extend(text_category)
+
+        # Handle meta_property filtering (label_name, name, value)
+        if meta_property:
+            if isinstance(meta_property, dict):
+                meta_property = [meta_property]
+            for prop in meta_property:
+                label_name = prop.get("label_name")
+                name = prop.get("name")
+                value = prop.get("value")
+                min_value = prop.get("min")
+                max_value = prop.get("max")
+
+                if label_name and name:
+                    query += " JOIN meta_properties mp ON s.file_path = mp.file_path"
+                    conditions.append("mp.label_name = ? AND mp.name = ?")
+                    query_params.extend([label_name, name])
+
+                    if value is not None:
+                        conditions.append("mp.value = ?")
+                        query_params.append(str(value))
+
+                    # Handle range filtering (min and max)
+                    if min_value is not None and max_value is not None:
+                        conditions.append("mp.value BETWEEN ? AND ?")
+                        query_params.extend([min_value, max_value])
+                    elif min_value is not None:
+                        conditions.append("mp.value >= ?")
+                        query_params.append(min_value)
+                    elif max_value is not None:
+                        conditions.append("mp.value <= ?")
+                        query_params.append(max_value)
+
+        # Combine joins and conditions
+        if joins:
+            query += " " + " ".join(joins)
+
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+
+        # Execute query
+        self.cursor.execute(query, tuple(query_params))
+        rows = self.cursor.fetchall()
+
+        results = {"sent_dicts": []}
+        for row in rows:
+            sent_dict = self._fetch_sent_dict(
+                row, include_embeddings=include_embeddings
+            )
+
+            if include_embeddings and row["embedding"]:
+                sent_dict["embedding"] = self._deserialize_embedding(row["embedding"])
+
+            results["sent_dicts"].append(sent_dict)
+
+        if include_meta_properties:
+            # Collect file_paths for meta_property fetching
+            file_paths = {row["file_path"] for row in rows}
+            results["meta_properties"] = self._fetch_meta_properties(file_paths)
+
+        return results
+
     def get_sents_by_named_subfolder(
         self,
         subfolder: str | list[str],

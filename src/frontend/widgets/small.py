@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Any, Callable
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, qDebug
 from PySide6.QtGui import QIntValidator, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -12,13 +12,15 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QRadioButton,
+    QScrollArea,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
+from frozendict import frozendict
 
 from backend.corpus.items import CorpusItem, MetaProperty, MetaType
-from frontend.styles.colors import Colors, is_dark
+from frontend.styles.colors import Colors, is_dark, random_color_rgb
 from frontend.styles.icons import Icons
 from frontend.styles.sheets import add_tooltip
 
@@ -353,8 +355,7 @@ class MinMaxEntryWidget(QWidget):
         int_validator = QIntValidator(self.min_default, self.max_default)
         self.min_input.setValidator(int_validator)
         layout.addWidget(self.min_input)
-        self.min_input.setStyleSheet("background-color: white;")
-        self.min_input.setFixedWidth(50)
+
         layout.addWidget(QLabel("<b>&ndash;</b>"))
         self.max_input = QLineEdit()
         self.max_input.setContentsMargins(0, 0, 0, 0)
@@ -362,8 +363,13 @@ class MinMaxEntryWidget(QWidget):
         int_validator = QIntValidator(self.min_default, self.max_default)
         self.max_input.setValidator(int_validator)
         layout.addWidget(self.max_input)
-        self.max_input.setStyleSheet("background-color: white;")
-        self.max_input.setFixedWidth(50)
+
+        for line_edits in (self.min_input, self.max_input):
+            line_edits.setStyleSheet(
+                "background-color: white; border: 1px solid black;"
+            )
+            line_edits.setFixedWidth(50)
+            line_edits.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         if self.live_handle:
             self.min_input.textChanged.connect(self.live_handle)
@@ -435,7 +441,7 @@ class CheckBox(QWidget):
                 border: 2px solid black;
             }}
             QCheckBox::indicator:checked {{
-                background-color: {Colors.med_blue};
+                image: url({Icons.check_mark.__str__()});
             }}
         """)
         if isinstance(item, CorpusLabel):
@@ -506,7 +512,8 @@ class DropDownMenu(QComboBox):
             }}
                            
             QComboBox {{
-                background-color: white;  
+                background-color: white;
+                border: 1px solid black;
             }}
             
             QComboBox::item:selected {{
@@ -528,23 +535,70 @@ class DropDownMenu(QComboBox):
 
 
 class MetaPropFilter(QWidget):
-    def __init__(self, filter_d: dict[str, Any], remove_handle: Callable) -> None:
+    def __init__(self, filter_l: list[dict[str, Any]], remove_handle: Callable) -> None:
         super().__init__()
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setFixedHeight(50)
+        self.color = random_color_rgb()
+        self.setStyleSheet(f"""
+            .QWidget {{
+                border-radius: 5px;
+                border: 2px solid rgb{self.color}; 
+            }}
+        """)
+        self.filter_l = filter_l
+        self.tooltip_parts = []
         main_layout = QHBoxLayout()
-        main_layout.setContentsMargins(10, 5, 10, 5)
+        main_layout.setContentsMargins(10, 0, 0, 0)
         main_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+
         tag = SmallXButton("Remove filter")
-        tag.connect(remove_handle)
+        tag.clicked.connect(remove_handle)
         main_layout.addWidget(tag)
-        self.setLayout(main_layout)
-        for name, d in filter_d.items():
+
+        scroll_area = QScrollArea()
+        scroll_area.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setObjectName("MyScrollArea")
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll_area.setStyleSheet("""
+            QWidget#MyScrollArea {
+                border: none;
+            }
+            QWidget#MyScrollArea QWidget#ContentWidget {
+                background-color: white;
+            }
+        """)
+        scroll_content_widget = QWidget()
+        scroll_content_widget.setObjectName("ContentWidget")
+        scroll_layout = QHBoxLayout()
+        scroll_layout.setContentsMargins(10, 0, 0, 0)
+
+        # Add filter properties to the scrollable layout
+        for filter_d in filter_l:
+            qDebug(str(filter_d))
             layout = QHBoxLayout()
-            name = "-".join(name)
-            prop_label = CorpusLabel(text=name, color=d["meta_prop"].color)
-            if isinstance(d["value"], dict):
-                value_label = QLabel(f"{d['value']['min']}-{d['value']['max']}")
+            name = "-".join([filter_d["label_name"], filter_d["name"]])
+
+            prop_label = CorpusLabel(text=name, color=filter_d["meta_prop"].color)
+
+            if filter_d.get("min") and filter_d.get("max"):
+                value_label = QLabel(f"{filter_d['min']}-{filter_d['max']}")
             else:
-                value_label = QLabel(d["value"])
+                value_label = QLabel(filter_d["value"])
             layout.addWidget(prop_label)
             layout.addWidget(value_label)
-            main_layout.addLayout(layout)
+            self.tooltip_parts.append(
+                f"<i>{prop_label.text()}:</i> <b>{value_label.text()}</b>"
+            )
+            scroll_layout.addLayout(layout)
+
+        scroll_content_widget.setLayout(scroll_layout)
+        scroll_area.setWidget(scroll_content_widget)
+        main_layout.addWidget(scroll_area)
+        tooltip = " ".join(self.tooltip_parts)
+        add_tooltip(self, tooltip)
+
+        self.setLayout(main_layout)

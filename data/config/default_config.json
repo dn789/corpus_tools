@@ -1,1 +1,13 @@
-{"corpus_config":{"corpus_path":"/home/dev/projects/corpus_analysis/test_corpus_esl","included_extensions":{},"ignored_extensions":[],"subfolders":{},"text_labels":{},"meta_labels":{},"text_categories":{},"meta_properties":{}}}
+{
+    "corpus_config": {
+        "summary": {},
+        "corpus_path": "/home/dev/projects/corpus_analysis/test_corpus_esl",
+        "included_extensions": {},
+        "ignored_extensions": [],
+        "subfolders": {},
+        "text_labels": {},
+        "meta_labels": {},
+        "text_categories": {},
+        "meta_properties": {}
+    }
+}

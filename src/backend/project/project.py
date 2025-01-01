@@ -101,4 +101,6 @@ class Project:
         )  # type: ignore
         if not self.corpus_config:
             raise ValueError("No corpus config provided")
-        self.corpus = Corpus(self.db, self.corpus_config, get_features=True)  # type: ignore
+
+    def corpus_query(self, query: dict[str, Any]) -> dict[str, Any]:
+        pass

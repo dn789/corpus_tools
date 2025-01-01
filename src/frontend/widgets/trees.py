@@ -475,7 +475,6 @@ class DocViewer(QTreeWidget):
     def check_for_tagged_text(self, tree_item: QTreeWidgetItem) -> bool | None:
         widget = self.itemWidget(tree_item, 0)
         if isinstance(widget, DocText):
-            qDebug(widget.label_text)
             if widget.doc_label_parent:
                 return True
         # if isinstance(widget, DocTreeNode):

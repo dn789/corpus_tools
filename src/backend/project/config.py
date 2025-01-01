@@ -19,6 +19,7 @@ from backend.utils.functions import is_quant
 
 
 class CorpusConfig(BaseSettings):
+    summary: dict[str, Any]
     corpus_path: Optional[Path] = None
     included_extensions: dict[str, GenericCorpusItem] = Field(default_factory=dict)
     ignored_extensions: set[str] = Field(default_factory=set)

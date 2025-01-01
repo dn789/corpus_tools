@@ -8,7 +8,7 @@ from frozendict import frozendict
 
 from backend.project.config import DocLabel
 from backend.utils.functions import flatten_lists
-from backend.utils.nlp import SentTokenizer
+from backend.utils.nlp import SpacyModel
 
 
 def file_to_doc(file_path: Path) -> dict | list:
@@ -120,7 +120,7 @@ def get_content_under_doc_labels(
 
 def sent_tokenize_label_text(
     doc_label_text_iterator: Generator[dict[str, str | set[str]], None, None],
-    sent_tokenizer: SentTokenizer,
+    sent_tokenizer: SpacyModel,
 ) -> list[dict[str, str | int | set[str]]]:
     """
     Iterates over output of get_content_under_doc_labels and returns a list of
@@ -166,7 +166,7 @@ def sent_tokenize_label_text(
 
 
 def get_sents_from_doc(
-    doc: dict | list, target_doc_labels: list[DocLabel], sent_tokenizer: SentTokenizer
+    doc: dict | list, target_doc_labels: list[DocLabel], sent_tokenizer: SpacyModel
 ) -> list[dict[str, str | int | set[str]]]:
     """"""
     iterator = get_content_under_doc_labels(doc, target_doc_labels=target_doc_labels)
