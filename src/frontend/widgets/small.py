@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any, Callable
-from PySide6.QtCore import Qt, Signal, qDebug
-from PySide6.QtGui import QIntValidator, QPixmap
+from PySide6.QtCore import QAbstractTableModel, QObject, Qt, Signal, qDebug
+from PySide6.QtGui import QAction, QIntValidator, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMenu,
     QPushButton,
     QRadioButton,
     QScrollArea,
@@ -578,7 +579,6 @@ class MetaPropFilter(QWidget):
 
         # Add filter properties to the scrollable layout
         for filter_d in filter_l:
-            qDebug(str(filter_d))
             layout = QHBoxLayout()
             name = "-".join([filter_d["label_name"], filter_d["name"]])
 
@@ -602,3 +602,139 @@ class MetaPropFilter(QWidget):
         add_tooltip(self, tooltip)
 
         self.setLayout(main_layout)
+
+
+class ErrorDisplay(QWidget):
+    def __init__(self, error: str):
+        super().__init__()
+        layout = QVBoxLayout()
+        self.setStyleSheet("""
+            font-size: 18px;
+        """)
+        self.setMaximumWidth(300)
+        error_header = QLabel("<i>Error completing task:<i>")
+        error_header.setStyleSheet("color: red;")
+        error_label = QLabel(f"{error}")
+        error_label.setWordWrap(True)
+        layout.addWidget(error_header)
+        layout.addWidget(error_label)
+        self.setLayout(layout)
+
+
+class ExportResultsWidget:
+    pass
+
+
+# class ExportResultsWidget(QWidget):
+#     def __init__(
+#         self,
+#         label: str,
+#         results_item: QObject | QWidget,
+#         formats=["csv", "txt"],
+#     ) -> None:
+#         super().__init__()
+#         layout = QVBoxLayout()
+#         layout.setAlignment(Qt.AlignmentFlag.AlignRight)
+#         self.button = Button(label)
+#         self.button_layout = QHBoxLayout()
+#         self.button_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
+#         self.button_layout.addWidget(self.button)
+#         self.button.clicked.connect(self.show_menu)
+#         self.dialog_label = QLabel()
+#         self.dialog_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+#         self.dialog_label.setStyleSheet(f"""
+#                 QLabel {{
+#                     color: {Colors.green}
+#                 }}
+#         """)
+#         layout.addLayout(self.button_layout)
+#         layout.addWidget(self.dialog_label)
+#         self.setLayout(layout)
+
+#         # Store the formats and their respective file filters
+#         self.formats = formats
+#         self.format_d = {
+#             "csv": ["Save CSV", "", "CSV Files (*.csv);;All Files (*)"],
+#             "txt": ["Save TXT", "", "Text Files (*.txt);;All Files (*)"],
+#         }
+#         self.results_item = results_item
+#         # Connect the button click to the show menu function
+
+#     def show_menu(self):
+#         # Create a QMenu and add actions for each format
+#         menu = QMenu(self)
+
+#         for format in self.formats:
+#             action = QAction(f"Export as {format.upper()}", self)
+#             action.triggered.connect(lambda _, f=format: self.open_save_dialog(f))
+#             menu.addAction(action)
+
+#         global_position = self.button.mapToGlobal(self.button.rect().topLeft())
+#         menu.exec(global_position)
+
+#     def open_save_dialog(self, format: str):
+#         # Determine the file dialog's parameters based on the selected format
+#         dialog_title, default_extension, file_filter = self.format_d.get(
+#             format, [None, None, None]
+#         )
+
+#         if dialog_title:
+#             # Open the file dialog for the selected format
+#             file_name, _ = QFileDialog.getSaveFileName(
+#                 self, dialog_title, "", file_filter
+#             )
+
+#             if file_name:
+#                 if format == "csv":
+#                     if issubclass(type(self.results_item), QAbstractTableModel):
+#                         self.save_table_model_to_csv(file_name)
+
+#                 elif format == "txt":
+#                     if issubclass(type(self.results_item), QAbstractTableModel):
+#                         self.save_table_model_to_txt(file_name)
+
+#     def save_table_model_to_csv(self, file_name: str):
+#         # Open the file and write the content in CSV format
+#         with open(file_name, "w") as file:
+#             row_count = self.results_item.rowCount()
+#             column_count = self.results_item.columnCount()
+
+#             # Write the header row (if any)
+#             headers = []
+#             for column in range(column_count):
+#                 headers.append(
+#                     str(self.results_item.headerData(column, Qt.Orientation.Horizontal))
+#                 )
+#             # file.write(",".join(headers) + "\n")
+#             file.write(f'{",".join(headers)}\n')
+
+#             # Write the table data
+#             for row in range(row_count):
+#                 row_data = []
+#                 for column in range(column_count):
+#                     item = self.results_item.data(
+#                         self.results_item.index(row, column),
+#                         Qt.ItemDataRole.DisplayRole,
+#                     )
+#                     row_data.append(str(item) if item else "")
+#                 # file.write(",".join(row_data) + "\n")
+#                 file.write(f'{",".join(row_data)}\n')
+#         self.dialog_label.setText("Exported")
+#         self.dialog_label.setToolTip(f"<i>Results saved to {file_name}<i>")
+
+#     def save_table_model_to_txt(self, file_name: str):
+#         # Open the file and write the content in TXT format
+#         with open(file_name, "w") as file:
+#             row_count = self.results_item.rowCount()
+#             column_count = self.results_item.columnCount()
+
+#             # Write the table data
+#             for row in range(row_count):
+#                 row_data = []
+#                 for column in range(column_count):
+#                     item = self.results_item.data(
+#                         self.results_item.index(row, column),
+#                         Qt.ItemDataRole.DisplayRole,
+#                     )
+#                     row_data.append(item if item else "")
+#                 file.write("\t".join(row_data) + "\n")

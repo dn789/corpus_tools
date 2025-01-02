@@ -50,8 +50,12 @@ class ProgressWidget(QWidget):
     def load_task(self, message: str, total_count: int) -> None:
         self.progress_bar.setValue(0)
         self.message.setText(message)
-        self.progress_bar.setMaximum(total_count)
-        self.counter.setText(f"0/{total_count}")
+        if total_count:
+            self.progress_bar.setMaximum(total_count)
+            self.counter.setText(f"0/{total_count}")
+        else:
+            self.progress_bar.setMinimum(0)
+            self.progress_bar.setMaximum(0)
 
     def increment(self) -> None:
         current_count = self.progress_bar.value() + 1

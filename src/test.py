@@ -1,18 +1,9 @@
-import sys
-from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QLabel
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QWidget
 
 
-class MainWindow(QMainWindow):
-    def __init__(self):
+class Test(QWidget):
+    increment = Signal()
+
+    def __init__(self) -> None:
         super().__init__()
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("Test"))
-        central_widget = QWidget()
-        central_widget.setLayout(layout)
-        self.setCentralWidget(central_widget)
-
-
-app = QApplication(sys.argv)
-window = MainWindow()
-window.show()
-sys.exit(app.exec())

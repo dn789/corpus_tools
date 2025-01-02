@@ -1,4 +1,4 @@
-from PySide6.QtCore import qDebug
+from PySide6.QtCore import Signal, qDebug
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QWidget
 from frozendict import frozendict
 from backend.corpus.items import MetaType
@@ -16,11 +16,13 @@ from frontend.widgets.small import (
 
 
 class CorpusSelectionWidget(MainColumn):
+    selectionsUpdate = Signal(bool)
+
     def __init__(self, project: Project):
         super().__init__("Corpus Selection")
         self.project = project
         self.content_ref = {}
-        self.selections = {}
+        self.selections_d = {}
         self.project.projectLoaded.connect(self.add_widgets)
         self.display = CorpusSelectionDisplay()
         self.add_widgets()
@@ -61,7 +63,7 @@ class CorpusSelectionWidget(MainColumn):
                 ).items():
                     corpus_label = CorpusLabel(item.name, item.color, id=name)
                     data[name] = CheckBox(
-                        corpus_label, connection=self.update_selection
+                        corpus_label, connection=self.update_selections_d
                     )
             if not data:
                 continue
@@ -105,22 +107,45 @@ class CorpusSelectionWidget(MainColumn):
         def remove_filter():
             filter_widget.setParent(None)
             filter_widget.deleteLater()
-            self.update_selection()
+            self.update_selections_d()
 
         filter_widget = MetaPropFilter(filter_l, remove_filter)
 
         self.filter_layout.addWidget(filter_widget)
-        self.update_selection()
+        self.update_selections_d()
 
-    def update_selection(self):
+    def update_selections_d(self):
+        self.selections_d = {}
         for prop_name in ("subfolders", "text_categories"):
-            self.selections[prop_name] = [
+            self.selections_d[prop_name] = [
                 checkbox.label
                 for name, checkbox in self.content_ref[prop_name].content_ref.items()
                 if checkbox.is_checked()
             ]
-        self.selections["meta_prop_filters"] = get_widgets(self.filter_layout)
-        self.display.populate(self.selections)
+        self.selections_d["meta_prop_filters"] = get_widgets(self.filter_layout)
+        selections_update = self.display.show_selections(self.selections_d)
+        self.selectionsUpdate.emit(selections_update)
+
+    def get_selections(self) -> list[dict[str, list[str | dict]]]:
+        selections = []
+        if not self.selections_d:
+            return []
+        for subfolder_item in self.selections_d["subfolders"] or [None]:
+            for text_cat_item in self.selections_d["text_categories"] or [None]:
+                for meta_prop_filter in self.selections_d["meta_prop_filters"] or [
+                    None
+                ]:
+                    selection = {}
+                    if subfolder_item:
+                        selection["subfolders"] = subfolder_item.text()
+                    if text_cat_item:
+                        selection["text_categories"] = text_cat_item.text()
+                    if meta_prop_filter:
+                        selection["meta_properties"] = meta_prop_filter.filter_l
+                    if selection:
+                        selections.append(selection)
+
+        return selections
 
 
 class CorpusSelectionDisplay(HScrollSection):
@@ -134,7 +159,7 @@ class CorpusSelectionDisplay(HScrollSection):
         self.setFixedHeight(200)
         self.placeholder_widget.setStyleSheet("font-size: 20px;")
 
-    def populate(self, selection: dict[str, list[CorpusLabel]]):
+    def show_selections(self, selection: dict[str, list[CorpusLabel]]) -> bool:
         self.clear()
         content = {}
         for i1, subfolder_item in enumerate(selection["subfolders"] or [None]):
@@ -158,6 +183,8 @@ class CorpusSelectionDisplay(HScrollSection):
         self.add_content(content)
         if not any(v for v in selection.values()):
             self.clear()
+            return False
+        return True
 
 
 class SelectionFrame(QFrame):

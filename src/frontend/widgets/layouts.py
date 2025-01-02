@@ -276,6 +276,35 @@ class ColumnScrollArea(QScrollArea):
         self.main_widget = content_widget
 
 
+class HScrollArea(QScrollArea):
+    def __init__(self, content: QHBoxLayout | QWidget) -> None:
+        super().__init__()
+        self.setObjectName("MyScrollArea")
+        self.setStyleSheet("""
+           
+            QWidget#MyScrollArea {
+                border: none;            
+            }
+            QWidget#MyScrollArea QWidget#ContentWidget {
+                background-color: white;
+            }
+        """)
+
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setWidgetResizable(True)
+        self.v_scroll_bar = self.verticalScrollBar()
+        if type(content) is QHBoxLayout:
+            content_widget = QWidget()
+            content_widget.setObjectName("ContentWidget")
+            content_widget.setLayout(content)
+        elif type(content) is QWidget:
+            content.setObjectName("ContentWidget")
+            content_widget = content
+        content_widget.layout().setAlignment(Qt.AlignmentFlag.AlignLeft)  # type: ignore
+        self.setWidget(content_widget)
+        self.main_widget = content_widget
+
+
 class KeyValueTable(QFrame):
     def __init__(self, data: dict[str, Any]):
         super().__init__()

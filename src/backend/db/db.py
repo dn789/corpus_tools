@@ -242,10 +242,10 @@ class DatabaseManager:
 
     def get_sents(
         self,
-        named_subfolder: list[str] | str | None = None,
-        file_path: Path | list[Path] | None = None,
-        text_category: list[str] | str | None = None,
-        meta_property: dict[str, Any] | list[dict[str, Any]] | None = None,
+        subfolders: list[str] | str | None = None,
+        file_paths: Path | list[Path] | None = None,
+        text_categories: list[str] | str | None = None,
+        meta_properties: dict[str, Any] | list[dict[str, Any]] | None = None,
         include_embeddings: bool = False,
         include_meta_properties: bool = True,
     ) -> dict[str, Any]:
@@ -272,36 +272,36 @@ class DatabaseManager:
         conditions = []
 
         # Handle named_subfolder filtering
-        if named_subfolder:
-            if isinstance(named_subfolder, str):
-                named_subfolder = [named_subfolder]
-            placeholders = ",".join(["?"] * len(named_subfolder))
+        if subfolders:
+            if isinstance(subfolders, str):
+                subfolders = [subfolders]
+            placeholders = ",".join(["?"] * len(subfolders))
             joins.append("JOIN subfolders sf ON s.file_path = sf.file_path")
             conditions.append(f"sf.subfolder IN ({placeholders})")
-            query_params.extend(named_subfolder)
+            query_params.extend(subfolders)
 
         # Handle file_path filtering
-        if file_path:
-            if isinstance(file_path, Path):
-                file_path = [file_path]
-            placeholders = ",".join(["?"] * len(file_path))
+        if file_paths:
+            if isinstance(file_paths, Path):
+                file_paths = [file_paths]
+            placeholders = ",".join(["?"] * len(file_paths))
             conditions.append(f"s.file_path IN ({placeholders})")
-            query_params.extend(str(p) for p in file_path)
+            query_params.extend(str(p) for p in file_paths)
 
         # Handle text_category filtering
-        if text_category:
-            if isinstance(text_category, str):
-                text_category = [text_category]
-            placeholders = ",".join(["?"] * len(text_category))
+        if text_categories:
+            if isinstance(text_categories, str):
+                text_categories = [text_categories]
+            placeholders = ",".join(["?"] * len(text_categories))
             joins.append("JOIN text_categories tc ON s.id = tc.sentence_id")
             conditions.append(f"tc.name IN ({placeholders})")
-            query_params.extend(text_category)
+            query_params.extend(text_categories)
 
         # Handle meta_property filtering (label_name, name, value)
-        if meta_property:
-            if isinstance(meta_property, dict):
-                meta_property = [meta_property]
-            for prop in meta_property:
+        if meta_properties:
+            if isinstance(meta_properties, dict):
+                meta_properties = [meta_properties]
+            for prop in meta_properties:
                 label_name = prop.get("label_name")
                 name = prop.get("name")
                 value = prop.get("value")
@@ -352,8 +352,8 @@ class DatabaseManager:
 
         if include_meta_properties:
             # Collect file_paths for meta_property fetching
-            file_paths = {row["file_path"] for row in rows}
-            results["meta_properties"] = self._fetch_meta_properties(file_paths)
+            file_paths = {row["file_path"] for row in rows}  # type: ignore
+            results["meta_properties"] = self._fetch_meta_properties(file_paths)  # type: ignore
 
         return results
 

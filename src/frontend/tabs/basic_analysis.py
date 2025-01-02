@@ -1,9 +1,38 @@
-from PySide6.QtCore import qDebug
+from PySide6.QtCore import QThread, Signal, qDebug
 from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 
 from frontend.project import ProjectWrapper as Project
 from frontend.widgets.corpus_selection import CorpusSelectionWidget
-from frontend.widgets.small import Button
+
+
+class TaskThread(QThread):
+    task_started = Signal(str)
+    task_finished = Signal(dict)
+    thread_complete = Signal()
+
+    def __init__(self, task_queue: list[dict]):
+        super().__init__()
+        self.queue = task_queue
+
+    def run(self):
+        for i, task in enumerate(self.queue):
+            exception = ""
+            self.task_started.emit(task["type"])
+            try:
+                results = task["task"](task["sents"], **task["kwargs"])
+            except Exception as e:
+                exception = repr(e)
+                results = None
+            self.task_finished.emit(
+                {
+                    "type": task["type"],
+                    "header": task["header"],
+                    "results": results,
+                    "index": i,
+                    "exception": exception,
+                }
+            )
+        self.thread_complete.emit()
 
 
 class BasicAnalysisWidget(QWidget):
@@ -19,21 +48,11 @@ class BasicAnalysisWidget(QWidget):
         right_layout.addWidget(QWidget())
         self.corpus_selection_widget = CorpusSelectionWidget(self.project)
         left_layout.addWidget(self.corpus_selection_widget)
-        button = Button("Selections", connect=self.get_selections)
-        button.setFixedSize(300, 300)
-        left_layout.addWidget(button)
 
     def get_selections(self):
-        widget_selections = self.corpus_selection_widget.selections
-        if not widget_selections:
-            return
-        selections = {}
-        for prop_name in ("subfolders", "text_categories"):
-            selections[prop_name] = [
-                item.text() for item in widget_selections[prop_name]
-            ]
-        selections["meta_properties"] = [
-            filter_widget.filter_l
-            for filter_widget in widget_selections["meta_prop_filters"]
-        ]
-        qDebug(str(selections))
+        selections = self.corpus_selection_widget.get_selections()
+        # for selection in selections:
+        # qDebug("----------------\n")
+        # qDebug(str(selection))
+        # qDebug("\n----------------\n")
+        return selections
