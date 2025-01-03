@@ -63,7 +63,12 @@ class NERModel:
 
         return combined_entities
 
-    def get_entities_from_sents(self, sent_dicts: dict[str, Any], batch_size: int = 8):
+    def get_entities_from_sents(
+        self,
+        sent_dicts: dict[str, Any],
+        batch_size: int = 8,
+        frontend_connect: Any | None = None,
+    ):
         model = NERModel()
         sents = [sent_d["sentence"] for sent_d in sent_dicts]  # type: ignore
         entities = model.get_entities(sents, batch_size=batch_size)

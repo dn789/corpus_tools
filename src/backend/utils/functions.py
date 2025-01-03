@@ -1,5 +1,6 @@
 from datetime import date
-from typing import Any
+from typing import Any, Callable
+import inspect
 
 
 def flatten_lists(nested_list: list):
@@ -45,3 +46,16 @@ def is_quant(item: Any) -> bool:
         return not any(char.isalpha() for char in item)
     else:
         raise ValueError("Incompatible meta property value")
+
+
+def get_default_func_args(func: Callable, pop_keys: list[str] = ["frontend_connect"]):
+    signature = inspect.signature(func)
+    d = {
+        k: v.default
+        for k, v in signature.parameters.items()
+        if v.default is not inspect.Parameter.empty
+    }
+    for k in pop_keys:
+        if k in d:
+            d.pop(k)
+    return d

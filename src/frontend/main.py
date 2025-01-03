@@ -27,9 +27,9 @@ class MainTabWidget(QTabWidget):
         corpus_config_tab.tabChange.connect(self.tab_change)
 
         self.tabs_dict = {
-            "Configure Corpus": corpus_config_tab,
+            "Configure": corpus_config_tab,
             "Overview": Overview(self.project),
-            "Basic Analysis": BasicAnalysisWidget(self.project),
+            "Analyze": BasicAnalysisWidget(self.project),
             "Plot": QWidget(),
             "Search": QWidget(),
         }

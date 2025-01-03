@@ -24,6 +24,7 @@ from frontend.widgets.small import (
 class VSplitter(QSplitter):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
+
         self.setHandleWidth(15)
         self.setStyleSheet(f"""
             QSplitter::handle:vertical {{
@@ -36,10 +37,10 @@ class VSplitter(QSplitter):
         self.widgets = []
         self.widget_index = 0
         self.splitterMoved.connect(self.set_widgets_visible)
+        self.margin = 80
 
     def add_widget(self, heading: str, widget: QWidget) -> None:
         self.widgets.append(widget)
-
         heading_layout = QHBoxLayout()
         heading_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         widget_layout = QVBoxLayout()
@@ -85,8 +86,8 @@ class VSplitter(QSplitter):
         self.widgets[1].setVisible(False)
         self.view_buttons[0].up()
         self.view_buttons[1].up()
-        expand_height = self.height() - 50
-        collapse_height = 50
+        expand_height = self.height() - self.margin
+        collapse_height = self.margin
         self.setSizes([expand_height, collapse_height])
 
     def splitter_up(self) -> None:
@@ -94,8 +95,8 @@ class VSplitter(QSplitter):
         self.widgets[1].setVisible(True)
         self.view_buttons[0].down()
         self.view_buttons[1].down()
-        expand_height = self.height() - 50
-        collapse_height = 50
+        expand_height = self.height() - self.margin
+        collapse_height = self.margin
         self.setSizes([collapse_height, expand_height])
 
     def set_widgets_visible(self) -> None:
@@ -113,7 +114,7 @@ class VSplitter(QSplitter):
 
 
 class MainColumn(QWidget):
-    def __init__(self, heading_text: str) -> None:
+    def __init__(self, heading_text: str | None = None) -> None:
         super().__init__()
         self.setFixedWidth(475)
 
@@ -122,8 +123,9 @@ class MainColumn(QWidget):
         outer_layout.setSpacing(10)
         self.content_layout = QVBoxLayout()
 
-        heading = LargeHeading(heading_text)
-        outer_layout.addWidget(heading)
+        if heading_text:
+            heading = LargeHeading(heading_text)
+            outer_layout.addWidget(heading)
 
         scroll_area = ColumnScrollArea(self.content_layout)
         outer_layout.addWidget(scroll_area)
@@ -157,8 +159,8 @@ class HScrollSection(QWidget):
         self.outer_layout = QVBoxLayout()
         self.setLayout(self.outer_layout)
         # Heading with content count
-        heading_layout = QHBoxLayout()
-        heading_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.heading_layout = QHBoxLayout()
+        self.heading_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         if large:
             heading = LargeHeading(
                 heading_text, font_style="italic", alignment=Qt.AlignmentFlag.AlignLeft
@@ -171,9 +173,9 @@ class HScrollSection(QWidget):
             self.content_count = MediumHeading("()")
         if not show_content_count:
             self.content_count.hide()
-        heading_layout.addWidget(heading)
-        heading_layout.addWidget(self.content_count)
-        self.outer_layout.addLayout(heading_layout)
+        self.heading_layout.addWidget(heading)
+        self.heading_layout.addWidget(self.content_count)
+        self.outer_layout.addLayout(self.heading_layout)
 
         # Content widget
         self.content_layout = QHBoxLayout()
@@ -189,12 +191,12 @@ class HScrollSection(QWidget):
         scroll_area.setWidget(content_widget)
         content_widget.setObjectName("ContentScrollArea")
         # Scroll Wrapper
-        scroll_wrapper = QFrame()
+        self.scroll_wrapper = QFrame()
         scroll_wrapper_layout = QVBoxLayout()
         scroll_wrapper_layout.setContentsMargins(10, 0, 10, 0)
         scroll_wrapper_layout.addWidget(scroll_area)
-        scroll_wrapper.setLayout(scroll_wrapper_layout)
-        scroll_wrapper.setStyleSheet(f"""
+        self.scroll_wrapper.setLayout(scroll_wrapper_layout)
+        self.scroll_wrapper.setStyleSheet(f"""
             QFrame {{ 
                 border-radius: 5px; 
                 background-color: {background_color};
@@ -206,7 +208,7 @@ class HScrollSection(QWidget):
 
         """)
 
-        self.outer_layout.addWidget(scroll_wrapper)
+        self.outer_layout.addWidget(self.scroll_wrapper)
 
         self.placeholder_widget = QLabel(f"{placeholder_text}")
 

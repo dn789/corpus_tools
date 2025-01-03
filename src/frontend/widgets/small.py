@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any, Callable
 from PySide6.QtCore import QAbstractTableModel, QObject, Qt, Signal, qDebug
-from PySide6.QtGui import QAction, QIntValidator, QPixmap
+from PySide6.QtGui import QAction, QDoubleValidator, QIntValidator, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -384,10 +384,53 @@ class MinMaxEntryWidget(QWidget):
         return min, max
 
 
+class NumberEntryWidget(QWidget):
+    def __init__(
+        self,
+        text: str,
+        default: int | float = 0,
+        live_handle: Callable | None = None,
+    ):
+        super().__init__()
+        self.setStyleSheet("font-size: 18px;")
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.min_default = default
+        self.live_handle = live_handle
+        self.text = text
+        self.initUI()
+
+    def initUI(self) -> None:
+        layout = QHBoxLayout()
+        layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(QLabel(self.text))
+        layout.setSpacing(10)
+        self.input = QLineEdit()
+        self.input.setContentsMargins(0, 0, 0, 0)
+        self.input.setPlaceholderText(str(self.min_default))
+        validator = QDoubleValidator()
+        self.input.setValidator(validator)
+        layout.addWidget(self.input)
+
+        self.input.setStyleSheet(
+            "background-color: white; border: 1px solid black; border-radius: 5px;"
+        )
+        self.input.setFixedWidth(75)
+        self.input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        if self.live_handle:
+            self.input.textChanged.connect(self.live_handle)
+
+        self.setLayout(layout)
+
+    def get_value(self) -> int:
+        return int(self.input.text() or self.min_default)
+
+
 class CheckBox(QWidget):
     def __init__(
         self,
-        item: str | CorpusLabel | MetaPropertySelection,
+        item: str | CorpusLabel | MetaPropertySelection | MediumHeading,
         connection: Callable | None = None,
         tooltip: str = "",
         font_size: int = 18,
@@ -456,6 +499,9 @@ class CheckBox(QWidget):
 
     def is_checked(self) -> bool:
         return self.check_box.isChecked()
+
+    def check(self) -> None:
+        self.check_box.setChecked(True)
 
     def uncheck(self) -> None:
         self.check_box.setChecked(False)

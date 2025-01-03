@@ -19,7 +19,7 @@ class CorpusSelectionWidget(MainColumn):
     selectionsUpdate = Signal(bool)
 
     def __init__(self, project: Project):
-        super().__init__("Corpus Selection")
+        super().__init__()
         self.project = project
         self.content_ref = {}
         self.selections_d = {}
@@ -37,6 +37,7 @@ class CorpusSelectionWidget(MainColumn):
         add_filter_button_layout.setContentsMargins(20, 0, 10, 0)
         add_filter_button_layout.addWidget(self.add_filter_button)
         self.add_filter_button.setDisabled(True)
+        self.content_layout.setContentsMargins(0, 0, 0, 0)
         self.content_layout.addLayout(add_filter_button_layout)
         self.filter_layout = QVBoxLayout()
         self.filter_layout.setContentsMargins(10, 0, 10, 0)

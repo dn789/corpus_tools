@@ -121,6 +121,7 @@ class CorpusConfig(BaseSettings):
 
 
 class Config(BaseSettings):
+    status: dict[str, Any]
     corpus_config: CorpusConfig
 
     def save(self, path: Path) -> None:

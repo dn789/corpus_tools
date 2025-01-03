@@ -26,7 +26,7 @@ class Overview(QWidget):
         self.main_layout.addLayout(self.content_layout)
         self.project.projectLoaded.connect(self.add_widgets)
         self.project.corpusProcessed.connect(self.add_widgets)
-        self.main_layout.setContentsMargins(100, 50, 100, 100)
+        # self.main_layout.setContentsMargins(100, 50, 100, 100)
         self.main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.add_widgets()

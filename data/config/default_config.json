@@ -1,4 +1,7 @@
 {
+    "status": {
+        "corpus_processed": false
+    },
     "corpus_config": {
         "summary": {},
         "corpus_path": "/home/dev/projects/corpus_analysis/test_corpus_esl",

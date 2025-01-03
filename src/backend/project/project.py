@@ -37,6 +37,8 @@ class Project:
             config_d = json.load(f)
         self.config = Config.model_validate(config_d)
         self.corpus_config = self.config.corpus_config
+        if self.config.status["corpus_processed"]:
+            self.load_db_manager()
 
     def _new_project(self) -> None:
         self.project_folder = None
@@ -103,4 +105,6 @@ class Project:
             raise ValueError("No corpus config provided")
 
     def corpus_query(self, query: dict[str, Any]) -> dict[str, Any]:
-        pass
+        if not self.config.status["corpus_processed"]:
+            raise ValueError("Need to process corpus first")
+        return self.db.get_sents(**query)

@@ -1,6 +1,6 @@
 import spacy
 from collections import Counter
-from typing import Iterable
+from typing import Any, Iterable
 from nltk import ngrams, word_tokenize
 from nltk.corpus import stopwords
 
@@ -30,13 +30,16 @@ def get_n_grams_from_sentence(sentence, n=2):
 
 
 def get_n_grams_from_corpus(
-    sents: Iterable[str], n=2, ignore_stopword_pairs=True
+    sent_dicts: list[dict[str, Any]],
+    n=2,
+    ignore_stopword_pairs=True,
+    frontend_connect: Any | None = None,
 ) -> list[tuple[str, int]]:
     if ignore_stopword_pairs:
         stop_words = set(stopwords.words("english"))
     n_grams = Counter()
-    for sent in sents:
-        sent_n_grams = get_n_grams_from_sentence(sent, n=n)
+    for sent_d in sent_dicts:
+        sent_n_grams = get_n_grams_from_sentence(sent_d["sentence"], n=n)
         for n_gram in sent_n_grams:
             if ignore_stopword_pairs and stop_words.issuperset(
                 [x.lower() for x in n_gram]
