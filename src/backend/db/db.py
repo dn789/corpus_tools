@@ -301,31 +301,36 @@ class DatabaseManager:
         if meta_properties:
             if isinstance(meta_properties, dict):
                 meta_properties = [meta_properties]
-            for prop in meta_properties:
+            for idx, prop in enumerate(meta_properties):
                 label_name = prop.get("label_name")
                 name = prop.get("name")
                 value = prop.get("value")
                 min_value = prop.get("min")
                 max_value = prop.get("max")
 
+                # Create a unique alias for each meta_properties table join
+                alias = f"mp{idx}"
+
                 if label_name and name:
-                    query += " JOIN meta_properties mp ON s.file_path = mp.file_path"
-                    conditions.append("mp.label_name = ? AND mp.name = ?")
+                    joins.append(
+                        f"JOIN meta_properties {alias} ON s.file_path = {alias}.file_path"
+                    )
+                    conditions.append(f"{alias}.label_name = ? AND {alias}.name = ?")
                     query_params.extend([label_name, name])
 
                     if value is not None:
-                        conditions.append("mp.value = ?")
+                        conditions.append(f"{alias}.value = ?")
                         query_params.append(str(value))
 
                     # Handle range filtering (min and max)
                     if min_value is not None and max_value is not None:
-                        conditions.append("mp.value BETWEEN ? AND ?")
+                        conditions.append(f"{alias}.value BETWEEN ? AND ?")
                         query_params.extend([min_value, max_value])
                     elif min_value is not None:
-                        conditions.append("mp.value >= ?")
+                        conditions.append(f"{alias}.value >= ?")
                         query_params.append(min_value)
                     elif max_value is not None:
-                        conditions.append("mp.value <= ?")
+                        conditions.append(f"{alias}.value <= ?")
                         query_params.append(max_value)
 
         # Combine joins and conditions
@@ -335,6 +340,7 @@ class DatabaseManager:
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
 
+        print(query)
         # Execute query
         self.cursor.execute(query, tuple(query_params))
         rows = self.cursor.fetchall()

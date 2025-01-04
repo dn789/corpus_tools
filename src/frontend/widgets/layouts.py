@@ -37,7 +37,7 @@ class VSplitter(QSplitter):
         self.widgets = []
         self.widget_index = 0
         self.splitterMoved.connect(self.set_widgets_visible)
-        self.margin = 80
+        self.margin = 40
 
     def add_widget(self, heading: str, widget: QWidget) -> None:
         self.widgets.append(widget)

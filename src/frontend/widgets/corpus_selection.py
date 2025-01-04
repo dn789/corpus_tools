@@ -1,9 +1,9 @@
+from typing import Any
 from PySide6.QtCore import Signal, qDebug
-from PySide6.QtWidgets import QFrame, QVBoxLayout, QWidget
-from frozendict import frozendict
-from backend.corpus.items import MetaType
+from PySide6.QtWidgets import QFrame, QLabel, QVBoxLayout, QWidget
+from backend.corpus.items import LabelType, MetaType
 from frontend.project import ProjectWrapper as Project
-from frontend.styles.colors import Colors, random_color_rgb
+from frontend.styles.colors import Colors
 from frontend.utils.functions import get_widgets
 from frontend.widgets.layouts import HScrollSection, MainColumn
 from frontend.widgets.small import (
@@ -159,9 +159,11 @@ class CorpusSelectionDisplay(HScrollSection):
         )
         self.setFixedHeight(200)
         self.placeholder_widget.setStyleSheet("font-size: 20px;")
+        self.last_selections = []
 
     def show_selections(self, selection: dict[str, list[CorpusLabel]]) -> bool:
         self.clear()
+        self.last_selections = []
         content = {}
         for i1, subfolder_item in enumerate(selection["subfolders"] or [None]):
             for i2, text_cat_item in enumerate(selection["text_categories"] or [None]):
@@ -178,9 +180,12 @@ class CorpusSelectionDisplay(HScrollSection):
                             text=f"filter {i3 + 1}",
                             color=meta_prop_filter.color,
                             tooltip=meta_prop_filter.toolTip(),
+                            id=meta_prop_filter.filter_l,  # type: ignore
+                            label_type=LabelType.META,
                         )
                         selection_frame.add_widget(widget)
                     content[(i1, i2, i3)] = selection_frame
+                    self.last_selections.append(selection_frame)
         self.add_content(content)
         if not any(v for v in selection.values()):
             self.clear()
@@ -203,3 +208,13 @@ class SelectionFrame(QFrame):
 
     def add_widget(self, widget: QWidget) -> None:
         self.main_layout.addWidget(widget)
+
+    def get_copy(self):
+        new_frame = SelectionFrame()
+        widgets = get_widgets(self.main_layout)
+        for widget in widgets:
+            if widget.label_type is LabelType.META:  # type: ignore
+                new_frame.add_widget(QLabel(widget.tooltip))  # type: ignore
+            else:
+                new_frame.add_widget(widget.get_copy())  # type: ignore
+        return new_frame

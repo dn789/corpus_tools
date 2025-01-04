@@ -37,6 +37,8 @@ def get_n_grams_from_corpus(
 ) -> list[tuple[str, int]]:
     if ignore_stopword_pairs:
         stop_words = set(stopwords.words("english"))
+    if frontend_connect:
+        frontend_connect.taskInfo.emit("Getting n-grams.", None)
     n_grams = Counter()
     for sent_d in sent_dicts:
         sent_n_grams = get_n_grams_from_sentence(sent_d["sentence"], n=n)
@@ -49,3 +51,29 @@ def get_n_grams_from_corpus(
             n_grams[n_gram] += 1
 
     return n_grams.most_common(1000)
+
+
+def summary(
+    sent_dicts: list[dict[str, Any]],
+    frontend_connect: Any | None = None,
+) -> list[tuple[str, str | int | float]]:
+    sent_count = 0
+    word_count = 0
+    word_types = set()
+    if frontend_connect:
+        frontend_connect.taskInfo.emit("Getting summary data.", None)
+    for sent_dict in sent_dicts:
+        sent_count += 1
+        tokens = word_tokenize(sent_dict["sentence"])
+        word_count += len(tokens)
+        word_types.update(tokens)
+    if sent_count:
+        average_sent_length = round(word_count / sent_count, 2)
+    else:
+        average_sent_length = "N/A"
+    return [
+        ("sentence count", sent_count),
+        ("word tokens", word_count),
+        ("word types", len(word_types)),
+        ("mlu", average_sent_length),
+    ]

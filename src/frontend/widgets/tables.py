@@ -2,6 +2,7 @@ from typing import Any
 
 from PySide6.QtWidgets import (
     QHBoxLayout,
+    QPushButton,
     QVBoxLayout,
     QWidget,
     QTableView,
@@ -14,6 +15,7 @@ from PySide6.QtCore import (
     QSortFilterProxyModel,
     QAbstractTableModel,
     QModelIndex,
+    qDebug,
 )
 
 from PySide6.QtGui import QFont
@@ -44,11 +46,11 @@ class MultiResultsWidget(HScrollArea):
             results_item = None
         elif type(result_widget) is ImageDisplayWidget:
             results_item = None
-        # if results_item:
-        #     export_widget = ExportResultsWidget(
-        #         "Export as...", results_item=results_item
-        #     )
-        #     top_layout.addWidget(export_widget)
+        if results_item:
+            export_widget = ExportResultsWidget(
+                "Export as...", results_item=results_item
+            )
+            top_layout.addWidget(export_widget)
         top_layout.setContentsMargins(0, 0, 10, 0)
         top_layout.setAlignment(Qt.AlignmentFlag.AlignBottom)
         result_layout = QVBoxLayout()
@@ -74,7 +76,7 @@ class ResultsTabWidget(QTabWidget):
             for label, widget in tabs.items():
                 self.addTab(widget, label)
 
-    def addTab(self, widget, label):
+    def add_tab(self, widget, label):
         index = super().addTab(widget, label)
 
         remove_button = SmallXButton("Remove this tab")
@@ -82,6 +84,7 @@ class ResultsTabWidget(QTabWidget):
             lambda: self.removeTab(self.tab_bar.currentIndex())  # type: ignore
         )
         remove_button.setVisible(False)
+        setattr(self, f"remove_button_{index}", remove_button)
         self.tab_bar.setTabButton(  # type: ignore
             index, QTabBar.ButtonPosition.RightSide, remove_button
         )

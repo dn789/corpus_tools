@@ -33,7 +33,8 @@ class ProgressWidget(QWidget):
         bar_layout = QHBoxLayout()
         self.setLayout(main_layout)
 
-        self.message = QLabel("Message...")
+        self.message = QLabel("Progress")
+        self.message.setWordWrap(True)
         main_layout.addWidget(self.message)
         main_layout.addLayout(bar_layout)
 
@@ -44,7 +45,7 @@ class ProgressWidget(QWidget):
         self.cancel_button = Button("Cancel")
         main_layout.addWidget(self.cancel_button)
 
-        self.counter = QLabel("0/0")
+        self.counter = QLabel("")
         bar_layout.addWidget(self.counter)
 
     def load_task(self, message: str, total_count: int) -> None:
@@ -56,6 +57,7 @@ class ProgressWidget(QWidget):
         else:
             self.progress_bar.setMinimum(0)
             self.progress_bar.setMaximum(0)
+            self.counter.setText("")
 
     def increment(self) -> None:
         current_count = self.progress_bar.value() + 1

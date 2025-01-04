@@ -71,6 +71,10 @@ class NERModel:
     ):
         model = NERModel()
         sents = [sent_d["sentence"] for sent_d in sent_dicts]  # type: ignore
+        if frontend_connect:
+            frontend_connect.taskInfo.emit(
+                "Finding named entities. This might take a while...", None
+            )
         entities = model.get_entities(sents, batch_size=batch_size)
         if not entities:
             return []

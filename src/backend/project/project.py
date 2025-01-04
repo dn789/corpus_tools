@@ -3,7 +3,8 @@ from pathlib import Path
 import shutil
 from typing import Any
 
-from backend.corpus.corpus import Corpus
+from PySide6.QtCore import qDebug
+
 from backend.db.db import DatabaseManager
 from backend.corpus.process.process_corpus import CorpusProcessor
 from backend.project.config import Config

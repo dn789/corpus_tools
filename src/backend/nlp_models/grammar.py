@@ -112,12 +112,14 @@ class GrammarTask:
             error_ds = self.gramformer.highlight_and_parse_errors(
                 original_sent, corrected_sent
             )
-            for error_d in error_ds:
+            for i, error_d in enumerate(error_ds):
                 results.append(
                     (
                         error_d["type"],
                         error_d["original"],
                         error_d["edit"],
+                        original_sent,
+                        sent_dicts[i]["file_path"],
                     )
                 )
         return results

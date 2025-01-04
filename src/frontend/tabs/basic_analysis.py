@@ -1,11 +1,12 @@
 from typing import Any, Callable
 from PySide6.QtCore import QThread, Qt, Signal, qDebug
-from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from backend.utils.functions import get_default_func_args
 from frontend.project import ProjectWrapper as Project
+from frontend.styles.colors import Colors
 from frontend.utils.functions import clear_layout
-from frontend.widgets.corpus_selection import CorpusSelectionWidget
+from frontend.widgets.corpus_selection import CorpusSelectionWidget, SelectionFrame
 from frontend.widgets.layouts import HScrollSection, MainColumn, VSplitter
 from frontend.widgets.progress import ProgressBackend, ProgressWidget
 from frontend.widgets.small import (
@@ -16,13 +17,16 @@ from frontend.widgets.small import (
     NumberEntryWidget,
 )
 from backend.tasks.basic_analysis import TASK_DICT
-from frontend.widgets.tables import ResultsTabWidget
+from frontend.widgets.tables import (
+    MultiResultsWidget,
+    ResultsTabWidget,
+)
 
 
 class TaskThread(QThread):
     taskInfo = Signal(str, int)
     increment = Signal()
-    results = Signal(dict)
+    task_results = Signal(dict)
     complete = Signal()
 
     def __init__(
@@ -44,8 +48,8 @@ class TaskThread(QThread):
             sent_dicts = self.project.corpus_query(selection)["sent_dicts"]
             sent_dicts_l.append(sent_dicts)
 
-        count = 0
         for task_name, task_dict in self.tasks_dict.items():
+            task_results = {"task_name": task_name, "results_and_selections": []}
             if class_ := task_dict.get("class"):
                 obj = class_()
 
@@ -67,14 +71,10 @@ class TaskThread(QThread):
 
             for sent_dicts in sent_dicts_l:
                 results = func(sent_dicts)
-                qDebug(str(results))
-                with open(f"{count}.txt", "w") as f:
-                    if type(results) is list:
-                        f.write("\n".join(str(x) for x in results))
-                    else:
-                        f.write(str(results))
-                count += 1
+                results_and_selection = {"results": results, "selection": selection}
+                task_results["results_and_selections"].append(results_and_selection)
 
+            self.task_results.emit(task_results)
         self.complete.emit()
 
 
@@ -103,23 +103,41 @@ class BasicAnalysisWidget(QWidget):
         self.task_widget = TaskWidget(self.project, self.start_task_thread)
         left_splitter.add_widget("Tasks", self.task_widget)
 
-    def get_selections(self):
-        selections = self.corpus_selection_widget.get_selections()
-        return selections
+    def get_selections_and_frames(self):
+        selections = self.corpus_selection_widget.get_selections() or [{}]
+        selection_frames = self.corpus_selection_widget.display.last_selections
+        return selections, selection_frames
 
     def start_task_thread(self):
         self.task_widget.progress_widget.show()
+        self.task_widget.tasks_finished_label.hide()
         self.task_widget.tasks_button.setDisabled(True)
         tasks_dict = self.task_widget.get_tasks()
-        selections = self.get_selections()
-        self.task_thread = TaskThread(self.project, tasks_dict, selections)
+        self.selections, self.selection_frames = self.get_selections_and_frames()
+
+        self.task_thread = TaskThread(self.project, tasks_dict, self.selections)
         self.task_thread.taskInfo.connect(self.task_widget.progress_widget.load_task)
-        self.task_thread.complete.connect(self.reset)
+        self.task_thread.task_results.connect(self.load_task_results)
+        self.task_thread.complete.connect(self.on_tasks_complete)
         self.task_thread.start()
 
-    def reset(self):
+    def load_task_results(self, task_results: dict[str, Any]) -> None:
+        task_results_widget = MultiResultsWidget()
+        task_name = task_results["task_name"]
+        for i, task_result in enumerate(task_results["results_and_selections"]):
+            if self.selection_frames:
+                selection_frame = self.selection_frames[i].get_copy()
+            else:
+                selection_frame = SelectionFrame()
+                selection_frame.add_widget(QLabel("<b>Whole corpus</b>"))
+            task_result_widget = TASK_DICT[task_name]["display"](task_result["results"])
+            task_results_widget.add_result(task_result_widget, selection_frame)
+        self.results.add_tab(task_results_widget, task_name)
+
+    def on_tasks_complete(self):
         self.task_thread.quit()
         self.task_widget.progress_widget.hide()
+        self.task_widget.tasks_finished_label.show()
         self.task_widget.tasks_button.setEnabled(True)
 
 
@@ -146,8 +164,16 @@ class TaskWidget(MainColumn):
         self.button_layout.addWidget(self.tasks_button)
         self.content_layout.addLayout(self.button_layout)
         self.progress_widget = ProgressWidget()
+        self.progress_widget.setContentsMargins(30, 10, 10, 10)
         self.progress_widget.hide()
         self.add_widget(self.progress_widget)
+        self.tasks_finished_label = QLabel("Tasks finished")
+        self.tasks_finished_label.setStyleSheet(
+            f"font-weight: bold; font-size: 26px; color: {Colors.green}"
+        )
+        self.tasks_finished_label.setContentsMargins(30, 10, 10, 10)
+        self.tasks_finished_label.hide()
+        self.add_widget(self.tasks_finished_label)
 
     def toggle_tasks_button(self):
         if any(widget.checkbox.is_checked() for widget in self.task_ref.values()):

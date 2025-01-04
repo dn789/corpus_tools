@@ -52,7 +52,7 @@ class MainTabWidget(QTabWidget):
 
         for tab_name, widget in self.tabs_dict.items():
             self.addTab(widget, tab_name)
-        self.tabBar().setCurrentIndex(1)
+        self.tabBar().setCurrentIndex(2)
 
     def tab_change(self, index: int) -> None:
         self.tabBar().setCurrentIndex(index)

@@ -1,15 +1,15 @@
 from frontend.widgets.tables import SearchableTable
 from backend.nlp_models.grammar import GrammarTask
 from backend.nlp_models.ner import NERModel
-from backend.utils.nlp import get_n_grams_from_corpus
+from backend.utils.nlp import get_n_grams_from_corpus, summary
 
 
 TASK_DICT = {
-    # "Basic analysis": {
-    #     "func": basic_analysis,
-    #     "tooltip": "Basic analysis",
-    #     "display": lambda results: SearchableTable(["Description", "Value"], results),
-    # },
+    "Summary": {
+        "func": summary,
+        "tooltip": "Summary data",
+        "display": lambda results: SearchableTable(["Feature", "Value"], results),
+    },
     "N-grams": {
         "func": get_n_grams_from_corpus,
         "tooltip": "N-grams",
