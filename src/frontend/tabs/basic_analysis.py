@@ -7,6 +7,7 @@ from frontend.project import ProjectWrapper as Project
 from frontend.styles.colors import Colors
 from frontend.utils.functions import clear_layout
 from frontend.widgets.corpus_selection import CorpusSelectionWidget, SelectionFrame
+from frontend.widgets.small import ErrorDisplay
 from frontend.widgets.layouts import HScrollSection, MainColumn, VSplitter
 from frontend.widgets.progress import ProgressBackend, ProgressWidget
 from frontend.widgets.small import (
@@ -70,9 +71,15 @@ class TaskThread(QThread):
                     )
 
             for sent_dicts in sent_dicts_l:
-                results = func(sent_dicts)
-                results_and_selection = {"results": results, "selection": selection}
-                task_results["results_and_selections"].append(results_and_selection)
+                try:
+                    results = func(sent_dicts)
+                    results_and_selection = {"results": results, "selection": selection}
+                    task_results["results_and_selections"].append(results_and_selection)
+                    raise EnvironmentError("adadad ahjda")
+                except Exception as e:
+                    error_message = f"{type(e).__name__}: {str(e)}"
+                    task_results = {"error": error_message, "task_name": task_name}
+                    break
 
             self.task_results.emit(task_results)
         self.complete.emit()
@@ -123,16 +130,22 @@ class BasicAnalysisWidget(QWidget):
 
     def load_task_results(self, task_results: dict[str, Any]) -> None:
         task_results_widget = MultiResultsWidget()
-        task_name = task_results["task_name"]
-        for i, task_result in enumerate(task_results["results_and_selections"]):
-            if self.selection_frames:
-                selection_frame = self.selection_frames[i].get_copy()
-            else:
-                selection_frame = SelectionFrame()
-                selection_frame.add_widget(QLabel("<b>Whole corpus</b>"))
-            task_result_widget = TASK_DICT[task_name]["display"](task_result["results"])
-            task_results_widget.add_result(task_result_widget, selection_frame)
-        self.results.add_tab(task_results_widget, task_name)
+        if error := task_results.get("error"):
+            task_result_widget = ErrorDisplay(error)
+            self.results.addTab(task_result_widget, task_results["task_name"])
+        else:
+            task_name = task_results["task_name"]
+            for i, task_result in enumerate(task_results["results_and_selections"]):
+                if self.selection_frames:
+                    selection_frame = self.selection_frames[i].get_copy()
+                else:
+                    selection_frame = SelectionFrame()
+                    selection_frame.add_widget(QLabel("<b>Whole corpus</b>"))
+                task_result_widget = TASK_DICT[task_name]["display"](
+                    task_result["results"]
+                )
+                task_results_widget.add_result(task_result_widget, selection_frame)
+            self.results.add_tab(task_results_widget, task_name)
 
     def on_tasks_complete(self):
         self.task_thread.quit()

@@ -81,6 +81,18 @@ class CorpusConfig(BaseSettings):
             ]
         return meta_labels
 
+    def get_meta_properties(
+        self, as_dict: bool = False
+    ) -> list[MetaProperty] | dict[tuple[str, str], MetaProperty]:
+        meta_props = {} if as_dict else []
+        for label, d in self.meta_properties.items():
+            for meta_prop in d.values():
+                if as_dict:
+                    meta_props[(label, meta_prop.name)] = meta_prop  # type: ignore
+                else:
+                    meta_props.append(meta_prop)  # type: ignore
+        return meta_props
+
     def get_subfolder_names_for_path(self, path: Path) -> list[str]:
         subfolder_names = []
         for folder in self.subfolders.values():

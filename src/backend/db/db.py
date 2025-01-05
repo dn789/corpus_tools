@@ -1,4 +1,5 @@
 import sqlite3
+from PySide6.QtCore import qDebug
 import numpy as np
 from pathlib import Path
 from typing import Any
@@ -510,7 +511,7 @@ class DatabaseManager:
         """
 
         sql_query = """
-            SELECT s.sentence, s.file_path, s.embedding, s.group_id
+            SELECT s.sentence, s.file_path, s.embedding, s.group_id, s.id
             FROM sentences s
             JOIN text_categories l ON s.id = l.sentence_id
             WHERE l.name = ?

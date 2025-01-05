@@ -158,7 +158,7 @@ class CorpusSelectionDisplay(HScrollSection):
             placeholder_text="Whole corpus",
         )
         self.setFixedHeight(200)
-        self.placeholder_widget.setStyleSheet("font-size: 20px;")
+        self.placeholder_widget.setStyleSheet("font-size: 25px; font-weight: bold;")
         self.last_selections = []
 
     def show_selections(self, selection: dict[str, list[CorpusLabel]]) -> bool:

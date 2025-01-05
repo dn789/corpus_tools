@@ -142,8 +142,8 @@ class MainColumn(QWidget):
 class HScrollSection(QWidget):
     def __init__(
         self,
-        heading_text: str,
-        content: dict[str, QWidget],
+        heading_text: str = "",
+        content: dict[Any, QWidget] | None = None,
         background_color: str = Colors.light_blue,
         show_content_count: bool = True,
         placeholder_text: str = "None",
@@ -152,30 +152,35 @@ class HScrollSection(QWidget):
     ):
         super().__init__()
         # Content reference
+        content = content or {}
         self.content_ref = {}
+        self.content_count = None
 
         # Outer layout
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.outer_layout = QVBoxLayout()
         self.setLayout(self.outer_layout)
         # Heading with content count
-        self.heading_layout = QHBoxLayout()
-        self.heading_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        if large:
-            heading = LargeHeading(
-                heading_text, font_style="italic", alignment=Qt.AlignmentFlag.AlignLeft
-            )
-            self.content_count = LargeHeading(
-                "()", font_style="italic", alignment=Qt.AlignmentFlag.AlignLeft
-            )
-        else:
-            heading = MediumHeading(heading_text)
-            self.content_count = MediumHeading("()")
-        if not show_content_count:
-            self.content_count.hide()
-        self.heading_layout.addWidget(heading)
-        self.heading_layout.addWidget(self.content_count)
-        self.outer_layout.addLayout(self.heading_layout)
+        if heading_text:
+            self.heading_layout = QHBoxLayout()
+            self.heading_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+            if large:
+                heading = LargeHeading(
+                    heading_text,
+                    font_style="italic",
+                    alignment=Qt.AlignmentFlag.AlignLeft,
+                )
+                self.content_count = LargeHeading(
+                    "()", font_style="italic", alignment=Qt.AlignmentFlag.AlignLeft
+                )
+            else:
+                heading = MediumHeading(heading_text)
+                self.content_count = MediumHeading("()")
+            if not show_content_count:
+                self.content_count.hide()
+            self.heading_layout.addWidget(heading)
+            self.heading_layout.addWidget(self.content_count)
+            self.outer_layout.addLayout(self.heading_layout)
 
         # Content widget
         self.content_layout = QHBoxLayout()
@@ -230,7 +235,8 @@ class HScrollSection(QWidget):
             self.placeholder_widget.hide()
         else:
             self.placeholder_widget.show()
-        self.content_count.setText(f"({len(self.content_ref)})")
+        if self.content_count:
+            self.content_count.setText(f"({len(self.content_ref)})")
 
     def remove_content(self, content_key: str | list[str]) -> None:
         widget = self.content_ref.pop(content_key)
@@ -238,14 +244,16 @@ class HScrollSection(QWidget):
         widget.deleteLater()
         if not self.content_ref:
             self.placeholder_widget.show()
-        self.content_count.setText(f"({len(self.content_ref)})")
+        if self.content_count:
+            self.content_count.setText(f"({len(self.content_ref)})")
 
     def clear(self) -> None:
         for key, widget in self.content_ref.items():
             self.content_layout.removeWidget(widget)
             widget.deleteLater()
         self.content_ref = {}
-        self.content_count.setText(f"({len(self.content_ref)})")
+        if self.content_count:
+            self.content_count.setText(f"({len(self.content_ref)})")
         self.placeholder_widget.show()
 
 

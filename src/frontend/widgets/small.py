@@ -512,10 +512,13 @@ class CheckBox(QWidget):
 
 
 class RadioButton(QRadioButton):
-    def __init__(self, label, connection: Callable | None = None, tooltip: str = ""):
+    def __init__(
+        self, label: str = "", connection: Callable | None = None, tooltip: str = ""
+    ):
         super().__init__()
-        self.setText(str(label))
-        self.label = label
+        if label:
+            self.setText(str(label))
+            self.label = label
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         if connection:
             self.toggled.connect(connection)
@@ -550,6 +553,23 @@ class RadioButton(QRadioButton):
             """)
         if tooltip:
             add_tooltip(self, tooltip)
+
+
+class RadioButtonWithWidget(QWidget):
+    def __init__(self, widget: QWidget, connection: Callable | None = None):
+        super().__init__()
+        self.widget = widget
+        layout = QHBoxLayout()
+        self.radio_button = RadioButton("", connection=connection)
+        layout.addWidget(self.radio_button)
+        layout.addWidget(widget)
+        self.setLayout(layout)
+
+    def is_checked(self):
+        return self.radio_button.isChecked()
+
+    def isChecked(self):
+        return self.radio_button.isChecked()
 
 
 class DropDownMenu(QComboBox):
@@ -661,8 +681,9 @@ class ErrorDisplay(QWidget):
     def __init__(self, error: str):
         super().__init__()
         layout = QVBoxLayout()
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.setStyleSheet("""
-            font-size: 18px;
+            font-size: 25px;
         """)
         self.setMaximumWidth(300)
         error_header = QLabel("<i>Error completing task:<i>")
@@ -671,6 +692,7 @@ class ErrorDisplay(QWidget):
         error_label.setWordWrap(True)
         layout.addWidget(error_header)
         layout.addWidget(error_label)
+        layout.addStretch()
         self.setLayout(layout)
 
 
