@@ -29,14 +29,9 @@ def plot_graph(
     # Convert the list of tuples into a pandas DataFrame for easier plotting
     df = pd.DataFrame(plot_values, columns=["x", "y"])
 
-    num_x_ticks = len(df["x"])
-    width = max(8, int(num_x_ticks / 1.5))
-    figsize = (
-        width,
-        6,
-    )
-    plt.figure(figsize=figsize)
-    plt.tight_layout()
+    # Set the figure size
+    plt.figure(figsize=(8, 6))
+
     # Create the plot based on the plot_type argument
     if plot_type == "line":
         sns.lineplot(data=df, x="x", y="y")

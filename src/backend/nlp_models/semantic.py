@@ -1,6 +1,7 @@
 from collections import Counter
+from typing import Any
 
-from numpy import ndarray
+from numpy import ndarray, array
 from sentence_transformers import SentenceTransformer, util
 
 
@@ -49,4 +50,35 @@ class SemanticModel:
                 results.append((i, score))
             else:
                 results.append(i)
+        return results
+
+    def query_sents_from_db(
+        self,
+        query: str | list[str],
+        sent_dicts: list[dict[str, Any]],
+        top_n: int | None = 25,
+    ) -> list[dict[str, str]]:
+        if type(query) is str:
+            query = [query]
+        all_scores = []
+        embeds = [sent_d["embedding"] for sent_d in sent_dicts]
+        embeds = array(embeds)
+        for query_str in query:
+            query_embed = self.model.encode(query_str)
+            query_scores = (
+                util.cos_sim(query_embed, embeds)[  # type: ignore
+                    0
+                ]
+                .cpu()
+                .tolist()
+            )  # type: ignore
+            all_scores.append(query_scores)
+        max_scores = [max(x) for x in zip(*all_scores)]
+        counter = Counter({i: score for i, score in enumerate(max_scores)})
+        results = []
+        for i, score in counter.most_common(top_n):
+            sent_dict = sent_dicts[i]
+            results.append(
+                {"sentence": sent_dict["sentence"], "file_path": sent_dict["file_path"]}
+            )
         return results

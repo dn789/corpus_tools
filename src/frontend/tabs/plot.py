@@ -239,7 +239,6 @@ class PlotWidget(MainColumn):
                 self.plot_d["y_type"] = name
                 self.plot_d["y_func"] = d["items_options"].entry_widget.text().strip()
                 if d["items_options"].per_sentence.isChecked():
-                    qDebug("per sentence")
                     self.plot_d["y_per"] = "per sentence"  # type: ignore
                 elif d["items_options"].per_word.isChecked():
                     self.plot_d["y_per"] = "per word"  # type: ignore

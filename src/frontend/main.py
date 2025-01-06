@@ -5,6 +5,7 @@ from frontend.tabs.basic_analysis import BasicAnalysisWidget
 from frontend.tabs.config_corpus import CorpusConfigTab
 from frontend.tabs.plot import PlotTab
 from frontend.tabs.overview import Overview
+from frontend.tabs.search import SearchWidget
 from frontend.widgets.menu_bar import MenuBar
 from frontend.styles.colors import Colors
 
@@ -32,7 +33,7 @@ class MainTabWidget(QTabWidget):
             "Overview": Overview(self.project),
             "Analyze": BasicAnalysisWidget(self.project),
             "Plot": PlotTab(self.project),
-            "Search": QWidget(),
+            "Search": SearchWidget(self.project),
         }
         self.setStyleSheet(f"""
 
@@ -53,7 +54,7 @@ class MainTabWidget(QTabWidget):
 
         for tab_name, widget in self.tabs_dict.items():
             self.addTab(widget, tab_name)
-        self.tabBar().setCurrentIndex(3)
+        # self.tabBar().setCurrentIndex(3)
 
     def tab_change(self, index: int) -> None:
         self.tabBar().setCurrentIndex(index)

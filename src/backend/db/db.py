@@ -341,7 +341,6 @@ class DatabaseManager:
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
 
-        print(query)
         # Execute query
         self.cursor.execute(query, tuple(query_params))
         rows = self.cursor.fetchall()

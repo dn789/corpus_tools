@@ -1,10 +1,8 @@
 from pathlib import Path
-import time
 
 from PySide6.QtWidgets import (
     QLabel,
     QSizePolicy,
-    QStackedLayout,
     QStackedWidget,
     QWidget,
     QVBoxLayout,
@@ -118,6 +116,7 @@ class CorpusConfigView(MainColumn):
         self.project = project
         self.config = project.corpus_config
         self.project.corpusConfigUpdated.connect(self.update_corpus_items)
+        self.project.projectSaved.connect(self.load_config)
         super().__init__("Configuration")
         self.ref = {}
 
@@ -157,19 +156,23 @@ class CorpusConfigView(MainColumn):
         self.make_process_corpus_layout()
 
     def make_process_corpus_layout(self):
+        layout = QVBoxLayout()
+        layout.setContentsMargins(20, 30, 10, 10)
         self.process_corpus_widget = QStackedWidget()
-        self.process_corpus_widget.setContentsMargins(35, 30, 10, 10)
+        layout.addWidget(self.process_corpus_widget)
         self.process_corpus_widget.setSizePolicy(
             QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
         )
-        self.add_widget(self.process_corpus_widget)
+        self.add_layout(layout)
 
         self.process_corpus_button = Button(
             "Process corpus",
             font_size=24,
-            tooltip="Click to process corpus after configuring",
+            tooltip="Process corpus after configuring and saving project",
         )
         self.process_corpus_button.setFixedSize(200, 50)
+        self.process_corpus_button.setDisabled(True)
+        self.process_corpus_button.setContentsMargins(50, 0, 0, 0)
         self.process_corpus_button.clicked.connect(self.process_corpus_thread)
         self.process_corpus_widget.addWidget(self.process_corpus_button)
 
@@ -210,6 +213,8 @@ class CorpusConfigView(MainColumn):
         self.processing_complete_widget.setLayout(processing_complete_layout)
         self.process_corpus_widget.addWidget(self.processing_complete_widget)
         self.process_corpus_widget.setCurrentWidget(self.processing_complete_widget)
+        # if self.project.config.status['corpus_processed']:
+        #     self.pro
 
     def process_corpus_thread(self):
         self.process_corpus_button.setDisabled(True)
@@ -227,7 +232,6 @@ class CorpusConfigView(MainColumn):
         self.process_corpus_widget.setCurrentWidget(self.processing_complete_widget)
         self.process_corpus_button.setEnabled(True)
         self.project.config.status["corpus_processed"] = True
-        # self.process_corpus_button.show()
         self.project.corpusProcessed.emit()
 
     def new_project_from_corpus_path(self):
@@ -251,6 +255,9 @@ class CorpusConfigView(MainColumn):
         if not self.project.config.status["corpus_processed"]:
             self.processing_complete_widget.hide()
             self.process_corpus_button.show()
+        else:
+            self.processing_complete_widget.show()
+            self.process_corpus_button.hide()
 
     def update_corpus_items(
         self,
@@ -258,6 +265,13 @@ class CorpusConfigView(MainColumn):
         content: CorpusItem | list[CorpusItem] | str | list[str] | Path,
         remove: bool = False,
     ):
+        if (
+            self.project.corpus_config.included_extensions
+            and self.project.project_folder
+        ):
+            self.process_corpus_button.setEnabled(True)
+        else:
+            self.process_corpus_button.setDisabled(True)
         if prop_name == "corpus_path":
             self.ref["corpus_path"].set_path(content)
             return

@@ -68,7 +68,7 @@ class CorpusProcessor:
             self.add_embeddings()
 
         self.get_text_categories()
-        self.get_word_count_and_meta_prop_info()
+        self.get_word_count_and_meta_prop_info(frontend_connect=frontend_connect)
         # self.db.close()
 
     def process_file(self, file_path: Path) -> None:
@@ -168,7 +168,7 @@ class CorpusProcessor:
             "cat_values": cat_values,
         }
 
-    def get_word_count_and_meta_prop_info(self) -> None:
+    def get_word_count_and_meta_prop_info(self, frontend_connect: Any) -> None:
         # Meta prop info
         meta_prop_values = {}
 
@@ -184,6 +184,11 @@ class CorpusProcessor:
         for (label_name, name), values in meta_prop_values.items():
             value_info = self.get_meta_prop_value_info(values)
             meta_prop = self.config.meta_properties[label_name][name]
+            if not any(
+                (value_info["min"], value_info["max"], value_info["cat_values"])
+            ):
+                self.config.meta_properties[label_name].pop(name)
+                continue
             if meta_prop.type != value_info["meta_type"]:
                 # Handle discrepancy here, for now just overrwite meta_type
                 pass
@@ -204,8 +209,11 @@ class CorpusProcessor:
                 for subfolder in self.config.subfolders
             },
         }
-
-        for sent_dict in tqdm(results["sent_dicts"], "Getting counts"):  # type: ignore
+        if frontend_connect:
+            frontend_connect.taskInfo.emit("Getting counts", len(results["sent_dicts"]))  # type: ignore
+        for sent_dict in results["sent_dicts"]:  # type: ignore
+            if frontend_connect:
+                frontend_connect.increment.emit()
             sent = sent_dict["sentence"]
             word_count = self.spacy_model.word_count(sent)
             sent_and_word_counts["total"]["sent_count"] += 1

@@ -25,7 +25,10 @@ def regex(
             value = match_count / word_count
         else:
             value = match_count
-
+        try:
+            label = float(label)
+        except ValueError:
+            pass
         match_counts.append((label, value))
     return match_counts
 
@@ -55,6 +58,10 @@ def custom(
             value = count / word_count
         else:
             value = count
+        try:
+            label = float(label)
+        except ValueError:
+            pass
         counts.append((label, value))
     return counts
 

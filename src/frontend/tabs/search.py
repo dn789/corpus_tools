@@ -17,12 +17,12 @@ from frontend.widgets.small import (
     ImageButton,
     LargeHeading,
 )
-from styles.icons import Icons
+from frontend.styles.icons import Icons
 
 
 class SearchThread(QThread):
-    search_complete = Signal(list)
-    model_loaded = Signal(SemanticModel)
+    searchComplete = Signal(list)
+    modelLoaded = Signal(SemanticModel)
 
     def __init__(
         self,
@@ -43,12 +43,14 @@ class SearchThread(QThread):
             if not self.search_model:
                 # sent_dicts = self.project.db.get_all_sents()['sent_dicts']
                 self.search_model = SemanticModel()
-                self.model_loaded.emit(self.search_model)
-
-            results = self.search_model.query_sents(self.query)
+                self.modelLoaded.emit(self.search_model)
+            sent_ds = self.project.db.get_all_sents(include_embeddings=True)[
+                "sent_dicts"
+            ]  # type: ignore
+            results = self.search_model.query_sents_from_db(self.query, sent_ds)
         else:
             results = []
-        self.search_complete.emit(results)
+        self.searchComplete.emit(results)
 
 
 class SearchWidget(QWidget):
@@ -149,9 +151,9 @@ class SearchWidget(QWidget):
         self.search_thread = SearchThread(
             self.query, search_type, self.project, self.model
         )
-        self.search_thread.search_complete.connect(self.display_results)
+        self.search_thread.searchComplete.connect(self.display_results)
         if not self.model:
-            self.search_thread.model_loaded.connect(self.load_model)
+            self.search_thread.modelLoaded.connect(self.load_model)
         self.search_thread.start()
 
     def load_model(self, model):
@@ -161,16 +163,10 @@ class SearchWidget(QWidget):
         self.results_table.horizontalHeader().setVisible(True)
         self.description.setText(f'Results for "{self.query}":')
         self.results_table.setRowCount(0)
-        subfolders = self.project.get_setting_value("corpus", "subfolders")
-        for i, (result, filename, _) in enumerate(results):
-            filename = Path(filename)
-            for subfolder in subfolders:
-                if subfolder in filename.parents:
-                    break
+        for i, (d) in enumerate(results):
             self.results_table.insertRow(i)
-            self.results_table.setItem(i, 0, QTableWidgetItem(result))
-            self.results_table.setItem(i, 1, QTableWidgetItem(filename.__str__()))
-            self.results_table.setItem(i, 2, QTableWidgetItem(subfolder.name))
+            self.results_table.setItem(i, 0, QTableWidgetItem(d["sentence"]))
+            self.results_table.setItem(i, 1, QTableWidgetItem(d["file_path"].__str__()))
         # self.loading_gif.stop()
         self.search_button.setEnabled(True)
         self.search_thread.quit()

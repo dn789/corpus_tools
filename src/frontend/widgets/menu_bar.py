@@ -61,7 +61,8 @@ class MenuBar(QMenuBar):
         self.disable_save()
 
     def enable_save(self) -> None:
-        self.save_action.setEnabled(True)
+        if self.project.project_folder:
+            self.save_action.setEnabled(True)
 
     def disable_save(self) -> None:
         self.save_action.setEnabled(False)

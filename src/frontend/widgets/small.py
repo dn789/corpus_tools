@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from backend.corpus.items import CorpusItem, LabelType, MetaProperty, MetaType
+from backend.utils.functions import is_quant
 from frontend.styles.colors import Colors, is_dark, random_color_rgb
 from frontend.styles.icons import Icons
 from frontend.styles.sheets import add_tooltip
@@ -330,17 +331,23 @@ class MetaPropertySelection(QWidget):
             self.cat_select.addItems(values)  # type: ignore
             selection_frame_layout.addWidget(self.cat_select)
         else:
-            self.min_max_select = MinMaxEntryWidget(
-                int(self.meta_prop.min), int(self.meta_prop.max)
-            )
+            min_ = self.meta_prop.min
+            max_ = self.meta_prop.max
+            try:
+                min_ = int(min_)
+                max_ = int(max_)
+            except ValueError:
+                min_ = self.meta_prop.min
+                max_ = self.meta_prop.max
+            self.min_max_select = MinMaxEntryWidget(min_, max_)
             selection_frame_layout.addWidget(self.min_max_select)
 
 
 class MinMaxEntryWidget(QWidget):
     def __init__(
         self,
-        min_default: int = 0,
-        max_default: int = 0,
+        min_default: int | str = 0,
+        max_default: int | str = 0,
         live_handle: Callable | None = None,
     ):
         super().__init__()
@@ -356,16 +363,18 @@ class MinMaxEntryWidget(QWidget):
         self.min_input = QLineEdit()
         self.min_input.setContentsMargins(0, 0, 0, 0)
         self.min_input.setPlaceholderText(str(self.min_default))
-        int_validator = QIntValidator(self.min_default, self.max_default)
-        self.min_input.setValidator(int_validator)
+        if isinstance(self.min_default, (int, float)):
+            int_validator = QIntValidator(self.min_default, self.max_default)
+            self.min_input.setValidator(int_validator)
         layout.addWidget(self.min_input)
 
         layout.addWidget(QLabel("<b>&ndash;</b>"))
         self.max_input = QLineEdit()
         self.max_input.setContentsMargins(0, 0, 0, 0)
         self.max_input.setPlaceholderText(str(self.max_default))
-        int_validator = QIntValidator(self.min_default, self.max_default)
-        self.max_input.setValidator(int_validator)
+        if isinstance(self.max_default, (int, float)):
+            int_validator = QIntValidator(self.min_default, self.max_default)
+            self.max_input.setValidator(int_validator)
         layout.addWidget(self.max_input)
 
         for line_edits in (self.min_input, self.max_input):

@@ -4,6 +4,8 @@ from typing import Any
 import pylangacq
 from pylangacq.chat import Utterance
 
+from backend.utils.functions import detect_and_convert_childes_age
+
 
 def process_cha_file(file_path: Path) -> dict[str, Any]:
     try:
@@ -30,6 +32,7 @@ def process_cha_file(file_path: Path) -> dict[str, Any]:
             # Temporary fix
             if isinstance(h_d, (list, set)):
                 h_d = str(h_d)
+
             meta_properties.append({"label_name": h_name, "name": h_name, "value": h_d})
     file_d["meta_properties"] = meta_properties  # type: ignore
     return file_d
@@ -45,8 +48,12 @@ def flatten_participants(
                 if isinstance(p_v, (list, set)):
                     p_v = str(p_v)
                 name = f"{p_name}-{p_k}"
+                if type(p_v) is str and (age := detect_and_convert_childes_age(p_v)):
+                    value = age
+                else:
+                    value = p_v
                 flattened.append(
-                    {"label_name": "Participants", "name": name, "value": p_v}
+                    {"label_name": "Participants", "name": name, "value": value}
                 )
     return flattened
 
