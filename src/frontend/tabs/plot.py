@@ -16,7 +16,7 @@ from backend.tasks.plot import get_plot_values
 from backend.corpus.items import MetaProperty
 from frontend.project import ProjectWrapper as Project
 from frontend.styles.colors import Colors
-from frontend.utils.functions import get_widgets
+from frontend.utils.functions import clear_layout, get_widgets
 from frontend.widgets.corpus_selection import CorpusSelectionWidget
 from frontend.widgets.layouts import HScrollSection, MainColumn, VSplitter
 from frontend.widgets.plot import ImageDisplayWidget, plot_graph
@@ -157,6 +157,8 @@ class PlotWidget(MainColumn):
     def __init__(self, project: Project, task_handle: Callable):
         super().__init__()
         self.project = project
+        self.project.projectLoaded.connect(self.on_project_load)
+        self.project.corpusProcessed.connect(self.on_project_load)
         self.corpus_selection_made = False
         self.tasks_selected = False
         self.task_handle = task_handle
@@ -190,6 +192,10 @@ class PlotWidget(MainColumn):
         self.tasks_finished_label.hide()
         self.add_widget(self.tasks_finished_label)
         self.toggle_plot_button()
+
+    def on_project_load(self):
+        self.x_select.initUI()  # type: ignore
+        self.y_select.initUI()  # type: ignore
 
     def toggle_plot_button(self):
         toggle_on_x = False
@@ -281,17 +287,25 @@ class XSelect(QWidget):
         self.project = project
         self.ref = {}
         self.handle = handle
-        main_layout = QVBoxLayout()
-        main_layout.setSpacing(0)
-        main_layout.setContentsMargins(0, 10, 10, 10)
-        self.setLayout(main_layout)
+        self.main_layout = QVBoxLayout()
+        self.main_layout.setSpacing(0)
+        self.main_layout.setContentsMargins(0, 10, 10, 10)
+        self.setLayout(self.main_layout)
         self.setFixedWidth(450)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         heading = LargeHeading(
             "X", font_style="italic", alignment=Qt.AlignmentFlag.AlignLeft
         )
         heading.setContentsMargins(10, 10, 10, 10)
-        main_layout.addWidget(heading)
+        self.main_layout.addWidget(heading)
+        self.content_layout = QVBoxLayout()
+        self.content_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.addLayout(self.content_layout)
+        self.initUI()
+
+    def initUI(self):
+        self.ref = {}
+        clear_layout(self.content_layout)
         x_choices_layout = QHBoxLayout()
         x_choices_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         x_choices_layout.setContentsMargins(10, 0, 10, 0)
@@ -339,8 +353,8 @@ class XSelect(QWidget):
             }
 
         self.x_choices_items_widget.setCurrentIndex(0)
-        main_layout.addLayout(x_choices_layout)
-        main_layout.addWidget(self.x_choices_items_widget)
+        self.content_layout.addLayout(x_choices_layout)
+        self.content_layout.addWidget(self.x_choices_items_widget)
         self.X_choices_group = QButtonGroup(x_choices_layout)
         self.X_choices_group.setExclusive(True)
 
@@ -357,20 +371,29 @@ class YSelect(QWidget):
         self.project = project
         self.ref = {}
         self.handle = handle
-        main_layout = QVBoxLayout()
-        main_layout.setSpacing(10)
-        self.setLayout(main_layout)
+        self.main_layout = QVBoxLayout()
+        self.main_layout.setSpacing(10)
+        self.setLayout(self.main_layout)
         self.setFixedWidth(450)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         heading = LargeHeading(
             "Y", font_style="italic", alignment=Qt.AlignmentFlag.AlignLeft
         )
         heading.setContentsMargins(0, 10, 10, 10)
-        main_layout.addWidget(heading)
-        y_choices_layout = QHBoxLayout()
-        y_choices_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        y_choices_layout.setContentsMargins(10, 0, 10, 0)
-        y_choices_layout.setSpacing(15)
+
+        self.main_layout.addWidget(heading)
+        self.content_layout = QVBoxLayout()
+        self.content_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.addLayout(self.content_layout)
+        self.initUI()
+
+    def initUI(self):
+        self.ref = {}
+        clear_layout(self.content_layout)
+        self.y_choices_layout = QHBoxLayout()
+        self.y_choices_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.y_choices_layout.setContentsMargins(10, 0, 10, 0)
+        self.y_choices_layout.setSpacing(15)
         self.y_choices_items_widget = QStackedWidget()
         for i, (name, widget, tooltip) in enumerate(
             (
@@ -398,7 +421,7 @@ class YSelect(QWidget):
                 radio_button.setDisabled(True)
             elif i == 1:
                 radio_button.setChecked(True)
-            y_choices_layout.addWidget(radio_button)
+            self.y_choices_layout.addWidget(radio_button)
 
             self.y_choices_items_widget.addWidget(widget)
             self.ref[name] = {
@@ -407,9 +430,9 @@ class YSelect(QWidget):
             }
 
         self.y_choices_items_widget.setCurrentIndex(1)
-        main_layout.addLayout(y_choices_layout)
-        main_layout.addWidget(self.y_choices_items_widget)
-        self.y_choices_group = QButtonGroup(y_choices_layout)
+        self.content_layout.addLayout(self.y_choices_layout)
+        self.content_layout.addWidget(self.y_choices_items_widget)
+        self.y_choices_group = QButtonGroup(self.y_choices_layout)
         self.y_choices_group.setExclusive(True)
 
     def on_radio_select(self):

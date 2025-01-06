@@ -213,6 +213,7 @@ class CorpusConfigView(MainColumn):
 
     def process_corpus_thread(self):
         self.process_corpus_button.setDisabled(True)
+        self.process_corpus_button.hide()
         self.process_corpus_widget.setCurrentWidget(self.progress_widget)
         thread = ProcessCorpusThread(self.project)
         thread.taskInfo.connect(self.progress_widget.load_task)
@@ -225,6 +226,8 @@ class CorpusConfigView(MainColumn):
         self.progress_widget.complete()
         self.process_corpus_widget.setCurrentWidget(self.processing_complete_widget)
         self.process_corpus_button.setEnabled(True)
+        self.project.config.status["corpus_processed"] = True
+        # self.process_corpus_button.show()
         self.project.corpusProcessed.emit()
 
     def new_project_from_corpus_path(self):
@@ -245,6 +248,9 @@ class CorpusConfigView(MainColumn):
             self.update_corpus_items(
                 prop_name, list(getattr(self.project.corpus_config, prop_name).values())
             )
+        if not self.project.config.status["corpus_processed"]:
+            self.processing_complete_widget.hide()
+            self.process_corpus_button.show()
 
     def update_corpus_items(
         self,

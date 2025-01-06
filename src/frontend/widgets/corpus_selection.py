@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QFrame, QLabel, QVBoxLayout, QWidget
 from backend.corpus.items import LabelType, MetaType
 from frontend.project import ProjectWrapper as Project
 from frontend.styles.colors import Colors
-from frontend.utils.functions import get_widgets
+from frontend.utils.functions import clear_layout, get_widgets
 from frontend.widgets.layouts import HScrollSection, MainColumn
 from frontend.widgets.small import (
     Button,
@@ -24,29 +24,14 @@ class CorpusSelectionWidget(MainColumn):
         self.content_ref = {}
         self.selections_d = {}
         self.project.projectLoaded.connect(self.add_widgets)
-        self.display = CorpusSelectionDisplay()
+        self.project.corpusProcessed.connect(self.add_widgets)
+
         self.add_widgets()
 
         # Add filter
-        self.add_filter_button = Button(
-            "Add Filter",
-            tooltip="Add meta property filter to selections",
-            connect=self.add_filter,
-        )
-        add_filter_button_layout = QVBoxLayout()
-        add_filter_button_layout.setContentsMargins(20, 0, 10, 0)
-        add_filter_button_layout.addWidget(self.add_filter_button)
-        self.add_filter_button.setDisabled(True)
-        self.content_layout.setContentsMargins(0, 0, 0, 0)
-        self.content_layout.addLayout(add_filter_button_layout)
-        self.filter_layout = QVBoxLayout()
-        self.filter_layout.setContentsMargins(10, 0, 10, 0)
-        self.content_layout.addLayout(self.filter_layout)
-
-        # Selection display
-        self.content_layout.addWidget(self.display)  # type: ignore
 
     def add_widgets(self):
+        clear_layout(self.content_layout)
         for prop_name in ("subfolders", "text_categories", "meta_properties"):
             data = {}
             if prop_name == "meta_properties":
@@ -77,6 +62,24 @@ class CorpusSelectionWidget(MainColumn):
             )
             self.content_ref[prop_name] = widget
             self.add_widget(widget)
+        self.add_filter_button = Button(
+            "Add Filter",
+            tooltip="Add meta property filter to selections",
+            connect=self.add_filter,
+        )
+        add_filter_button_layout = QVBoxLayout()
+        add_filter_button_layout.setContentsMargins(20, 0, 10, 0)
+        add_filter_button_layout.addWidget(self.add_filter_button)
+        self.add_filter_button.setDisabled(True)
+        self.content_layout.setContentsMargins(0, 0, 0, 0)
+        self.content_layout.addLayout(add_filter_button_layout)
+        self.filter_layout = QVBoxLayout()
+        self.filter_layout.setContentsMargins(10, 0, 10, 0)
+        self.content_layout.addLayout(self.filter_layout)
+
+        # Selection display
+        self.display = CorpusSelectionDisplay()
+        self.content_layout.addWidget(self.display)  # type: ignore
 
     def toggle_filter_button(self) -> None:
         if any(
@@ -118,11 +121,16 @@ class CorpusSelectionWidget(MainColumn):
     def update_selections_d(self):
         self.selections_d = {}
         for prop_name in ("subfolders", "text_categories"):
-            self.selections_d[prop_name] = [
-                checkbox.label
-                for name, checkbox in self.content_ref[prop_name].content_ref.items()
-                if checkbox.is_checked()
-            ]
+            if prop_name in self.content_ref:
+                self.selections_d[prop_name] = [
+                    checkbox.label
+                    for name, checkbox in self.content_ref[
+                        prop_name
+                    ].content_ref.items()
+                    if checkbox.is_checked()
+                ]
+            else:
+                self.selections_d[prop_name] = []
         self.selections_d["meta_prop_filters"] = get_widgets(self.filter_layout)
         selections_update = self.display.show_selections(self.selections_d)
         self.selectionsUpdate.emit(selections_update)

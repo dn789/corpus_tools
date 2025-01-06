@@ -15,6 +15,7 @@ from backend.corpus.process.process_doc import (
 from backend.nlp_models.semantic import SemanticModel
 from backend.utils.functions import is_quant
 from backend.utils.nlp import SpacyModel
+from frontend.styles.colors import random_color_rgb
 
 
 class CorpusProcessor:
@@ -32,6 +33,7 @@ class CorpusProcessor:
         self.subfolders = config.subfolders
         self.text_categories = config.text_labels
         self.meta_categories = config.meta_labels
+        self.text_category_names_for_cha = set()
 
         if not self.corpus_path:
             raise ValueError("No corpus path specified.")
@@ -67,13 +69,16 @@ class CorpusProcessor:
 
         self.get_text_categories()
         self.get_word_count_and_meta_prop_info()
-        self.db.close()
+        # self.db.close()
 
     def process_file(self, file_path: Path) -> None:
         file_type = file_path.suffix
 
         if file_type == ".cha":
             file_d = process_cha_file(file_path)
+            for sent_d in file_d["sent_dicts"]:
+                self.text_category_names_for_cha.add(sent_d["text_categories"][0])
+
         else:
             doc = file_to_doc(file_path)
             try:
@@ -117,10 +122,17 @@ class CorpusProcessor:
     def get_text_categories(self) -> None:
         self.config.text_categories = {}
         text_labels = self.config.get_text_labels()
-        for t_l in text_labels:
-            self.config.text_categories[t_l.name] = TextCategory(
-                name=t_l.name, color=t_l.color
-            )
+        if text_labels:
+            for t_l in text_labels:
+                self.config.text_categories[t_l.name] = TextCategory(
+                    name=t_l.name, color=t_l.color
+                )
+        else:
+            for name in self.text_category_names_for_cha:
+                self.config.text_categories[name] = TextCategory(
+                    name=name,
+                    color=random_color_rgb(),  # type: ignore
+                )
 
     def get_meta_prop_value_info(self, values: list[Any]) -> dict[str, Any]:
         """
@@ -193,7 +205,7 @@ class CorpusProcessor:
             },
         }
 
-        for sent_dict in results["sent_dicts"]:  # type: ignore
+        for sent_dict in tqdm(results["sent_dicts"], "Getting counts"):  # type: ignore
             sent = sent_dict["sentence"]
             word_count = self.spacy_model.word_count(sent)
             sent_and_word_counts["total"]["sent_count"] += 1

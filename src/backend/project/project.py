@@ -64,6 +64,7 @@ class Project:
         self._load_config()
 
     def _save_config(self) -> None:
+        self.paths = Paths(self.project_folder)  # type: ignore
         if not self.config or not self.config_path:
             raise ValueError("No config or config path provided.")
         self.config.save(self.config_path)

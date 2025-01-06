@@ -75,7 +75,6 @@ class TaskThread(QThread):
                     results = func(sent_dicts)
                     results_and_selection = {"results": results, "selection": selection}
                     task_results["results_and_selections"].append(results_and_selection)
-                    raise EnvironmentError("adadad ahjda")
                 except Exception as e:
                     error_message = f"{type(e).__name__}: {str(e)}"
                     task_results = {"error": error_message, "task_name": task_name}

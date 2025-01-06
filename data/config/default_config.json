@@ -4,7 +4,7 @@
     },
     "corpus_config": {
         "summary": {},
-        "corpus_path": "/home/dev/projects/corpus_analysis/test_corpus_esl",
+        "corpus_path": null,
         "included_extensions": {},
         "ignored_extensions": [],
         "subfolders": {},

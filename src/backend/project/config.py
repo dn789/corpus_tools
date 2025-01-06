@@ -16,6 +16,7 @@ from backend.corpus.items import (
     CorpusItem,
 )
 from backend.utils.functions import is_quant
+from frontend.styles.colors import random_color_rgb
 
 
 class CorpusConfig(BaseSettings):
@@ -104,14 +105,17 @@ class CorpusConfig(BaseSettings):
         label_name = meta_pro_ref["label_name"]
         name = meta_pro_ref["name"]
         value = meta_pro_ref["value"]
-        color = self.meta_labels[label_name].color
+        if self.meta_labels.get(label_name):
+            color = self.meta_labels[label_name].color
+        else:
+            color = random_color_rgb()
         meta_type = MetaType.QUANTITATIVE if is_quant(value) else MetaType.CATEGORICAL
         self.meta_properties.setdefault(label_name, {})
         self.meta_properties[label_name][name] = MetaProperty(
             name=name,
             label_name=label_name,
             type=meta_type,  # type: ignore
-            color=color,
+            color=color,  # type: ignore
         )
 
     def update_corpus_items(

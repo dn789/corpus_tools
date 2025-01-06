@@ -12,6 +12,7 @@ class Icons:
     arrow_up: Path = Path("./frontend/icons/arrow_up.svg")
     arrow_down: Path = Path("./frontend/icons/arrow_down.svg")
     check_mark: Path = Path("./frontend/icons/check.svg")
+    search: Path = Path("./frontend/icons/search.png")
     x: Path = Path("./frontend/icons/x.svg")
     folder_open: Callable = lambda: QApplication.style().standardIcon(  # type: ignore
         QStyle.StandardPixmap.SP_DirOpenIcon

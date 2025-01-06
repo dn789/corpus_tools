@@ -18,7 +18,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from frozendict import frozendict
 
 from backend.corpus.items import CorpusItem, LabelType, MetaProperty, MetaType
 from frontend.styles.colors import Colors, is_dark, random_color_rgb
@@ -33,7 +32,7 @@ class Button(QPushButton):
         connect: Callable | None = None,
         tooltip: str | None = None,
         font_size: int = 18,
-    ):
+    ) -> None:
         super().__init__(text)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.clicked.connect(connect)

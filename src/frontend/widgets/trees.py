@@ -270,6 +270,7 @@ class FolderViewer(QTreeWidget):
         self.path = None
         self.project.projectLoaded.connect(self.populate_tree)
         self.project.corpusConfigUpdated.connect(self.check_populate_tree)
+        self.project.projectLoaded.connect(self.populate_tree)
         self.project.projectLoaded.connect(self.tag_nodes_on_project_load)
         self.project.corpusConfigUpdated.connect(self.tag_nodes)
         self.folder_icon = Icons.folder_closed()
@@ -288,16 +289,21 @@ class FolderViewer(QTreeWidget):
         self.populate_tree()
 
     def check_populate_tree(
-        self, prop_name: str, content: Any, remove: bool = False
+        self,
+        prop_name: str | None = None,
+        content: Any | None = None,
+        remove: bool = False,
     ) -> None:
         if prop_name == "corpus_path":
             self.populate_tree(content)
+        # else:
+        #     self.clear()
 
     def populate_tree(self, path: Path | None = None):
         self.clear()
         path = path or self.project.corpus_config.corpus_path
         if path:
-            self.path = path
+            # self.path = Path(path)
             self.setHeaderLabel(path.__str__())
             self.add_node(self, path)
         else:
@@ -307,7 +313,6 @@ class FolderViewer(QTreeWidget):
     def add_node(self, parent, path: Path):
         for node_path in path.iterdir():
             node_name = node_path.name
-
             icon = self.folder_icon if node_path.is_dir() else self.file_icon
             widget = FolderTreeNode(node_name, icon)
             tree_item = QTreeWidgetItem(parent)
