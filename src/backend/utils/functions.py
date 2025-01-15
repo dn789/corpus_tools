@@ -50,6 +50,7 @@ def is_quant(item: Any) -> bool:
 
 
 def get_default_func_args(func: Callable, pop_keys: list[str] = ["frontend_connect"]):
+    """Gets default function arguments and values (for displaying on frontend)."""
     signature = inspect.signature(func)
     d = {
         k: v.default
@@ -69,20 +70,16 @@ def detect_childes_age(string: str) -> bool:
 
 
 def detect_and_convert_childes_age(string: str) -> float | None:
-    # Define the regex pattern for matching the age format "yy;mm.dd"
+    """Matches and converts mm;dd;yy CHILDES age format"""
     pattern = r"^(\d{1,2});(\d{1,2})\.(\d{1,2})$"
 
-    # Match the pattern using regex
     match = re.match(pattern, string)
 
     if match:
-        # Extract year, month, and day from the matched groups
         years = int(match.group(1))
         months = int(match.group(2))
         days = int(match.group(3))
 
-        # Convert the age into years as a float
-        # 1 year = 12 months, 1 month = 30.44 days (average days in a month)
         age_in_years = years + (months / 12) + (days / 365.25)
 
         return round(age_in_years, 2)  # Round to 2 decimal places

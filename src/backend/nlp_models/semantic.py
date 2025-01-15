@@ -6,6 +6,8 @@ from sentence_transformers import SentenceTransformer, util
 
 
 class SemanticModel:
+    """Sbert model class for semantic search."""
+
     def __init__(
         self,
         model_name: str = "msmarco-distilbert-base-v4",

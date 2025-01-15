@@ -1,6 +1,8 @@
+"""Misc NLP-related"""
+
 import spacy
 from collections import Counter
-from typing import Any, Iterable
+from typing import Any
 from nltk import ngrams, word_tokenize
 from nltk.corpus import stopwords
 

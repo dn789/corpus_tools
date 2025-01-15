@@ -104,15 +104,11 @@ class SearchableTable(QWidget):
         self.proxy_model.setFilterKeyColumn(-1)  # Search all columns.
         self.proxy_model.setSourceModel(self.model)
 
-        # self.proxy_model.sort(0, Qt.AscendingOrder)
-
         self.table.setModel(self.proxy_model)
 
         self.searchbar = QLineEdit()
         self.searchbar.setPlaceholderText("Search...")
 
-        # You can choose the type of search by connecting to a different slot here.
-        # see https://doc.qt.io/qt-5/qsortfilterproxymodel.html#public-slots
         self.searchbar.textChanged.connect(self.proxy_model.setFilterFixedString)
 
         layout = QVBoxLayout()

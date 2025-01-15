@@ -1,3 +1,8 @@
+"""
+"Overview" tab. Summarizes word count and meta property data for processed
+corpus.
+"""
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 

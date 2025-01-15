@@ -1,9 +1,11 @@
+"""Folder and document view trees for annotating/corpus configuration."""
+
 from frozendict import frozendict
 from pathlib import Path
 from typing import Any, Callable
 
 from PySide6.QtGui import QIcon
-from PySide6.QtCore import Qt, QTimer, qDebug
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QDialog,
     QFrame,
@@ -96,7 +98,7 @@ class DocTreeNode(QWidget):
         if type(self.key) is frozendict:
             self.label_d["label_name"]["name"] = key["_tag"]  # type: ignore
             self.label_d["label_name"]["widget"] = QLabel(
-                f'<b>{key["_tag"]}</b>'  # type: ignore
+                f"<b>{key['_tag']}</b>"  # type: ignore
             )  # type: ignore
             for k, v in self.key.items():
                 if k == "_tag":
@@ -210,7 +212,7 @@ def highlight_tree_node(
                     index = tree_node.label_frame_layout.indexOf(widget)
                     tree_node.label_frame_layout.removeWidget(widget)
                     widget.deleteLater()
-                    d["widget"] = QLabel(f'<i>{attr_name}</i>=<b>{d["value"]}</b>')
+                    d["widget"] = QLabel(f"<i>{attr_name}</i>=<b>{d['value']}</b>")
                     tree_node.label_frame_layout.insertWidget(index, d["widget"])
 
             widget = tree_node.doc_label_parents[target_label_type][
@@ -236,7 +238,7 @@ def highlight_tree_node(
                     prop_name_label.setStyleSheet(color_style_sheet)
                     eq_label = QLabel("=")
                     eq_label.setStyleSheet("padding: 0px; margin: 0px;")
-                    prop_value_label = QLabel(f'<b>{d["value"]}</b>')
+                    prop_value_label = QLabel(f"<b>{d['value']}</b>")
                     prop_value_label.setStyleSheet(color_lighter_style_sheet)
                     new_label_widget = QWidget()
                     layout = QHBoxLayout()

@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 import random
 
-from PySide6.QtCore import Qt, qDebug
-from PySide6.QtGui import QColor
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QPushButton
 
 from frontend.styles.sheets import add_tooltip

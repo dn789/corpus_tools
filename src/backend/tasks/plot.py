@@ -1,7 +1,9 @@
+"""Plotting functions."""
+
 from typing import Any, Callable
 import re
 
-from PySide6.QtCore import qDebug
+
 from backend.utils.nlp import SpacyModel
 
 

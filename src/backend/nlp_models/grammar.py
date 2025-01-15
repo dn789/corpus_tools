@@ -15,6 +15,8 @@ def filter_sent(sent: str) -> bool:
 
 
 class GramformerModel:
+    """Used for parsing errors and corrections from Grammarly model."""
+
     def __init__(self) -> None:
         self.model = Gramformer(models=1, use_gpu=True)
 
@@ -55,6 +57,8 @@ class GramformerModel:
 
 
 class GrammarlyModel:
+    """Used for highlighting errors and correcting them."""
+
     def __init__(self) -> None:
         self.pipeline = pipeline(
             "text2text-generation",
@@ -88,7 +92,9 @@ class GrammarlyModel:
 
 
 class GrammarTask:
-    def __init__(self):
+    "Main class"
+
+    def __init__(self) -> None:
         self.gramformer = GramformerModel()
         self.grammarly = GrammarlyModel()
 

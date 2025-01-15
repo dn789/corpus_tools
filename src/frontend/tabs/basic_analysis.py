@@ -1,5 +1,17 @@
+"""
+"Analyze" Tab
+
+Main components:
+
+- CorpusSelectionWidget: Used to select subset(s) of the corpus to analyze,
+    filtered by subfolder/text category/meta property values.
+- TaskDisplay: Used to select and configure tasks
+- Results tab
+
+"""
+
 from typing import Any, Callable
-from PySide6.QtCore import QThread, Qt, Signal, qDebug
+from PySide6.QtCore import QThread, Qt, Signal
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from backend.utils.functions import get_default_func_args
@@ -25,6 +37,8 @@ from frontend.widgets.tables import (
 
 
 class TaskThread(QThread):
+    """Thread for analysis tasks."""
+
     taskInfo = Signal(str, int)
     increment = Signal()
     task_results = Signal(dict)

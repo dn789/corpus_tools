@@ -1,5 +1,4 @@
 import sqlite3
-from PySide6.QtCore import qDebug
 import numpy as np
 from pathlib import Path
 from typing import Any
@@ -7,6 +6,19 @@ import pickle
 
 
 class DatabaseManager:
+    """
+    Class for managing database of corpus content.
+
+    Creates 5 tables:
+
+    - Sentences (with file path, embeddings and group id)
+    - Text categories (linked to sentences by id)
+    - Meta properties (linked to sentences by file path)
+    - Sentence tiers (linked to sentences by id)
+    - Subfolders (linked to sentences by file path)
+
+    """
+
     def __init__(self, db_path: Path) -> None:
         self.db_path = db_path
 
@@ -17,7 +29,6 @@ class DatabaseManager:
         self._make_tables()
 
     def connect(self) -> None:
-        # self._make_query_strs()
         self.connection = sqlite3.connect(self.db_path, check_same_thread=False)
         self.connection.row_factory = sqlite3.Row
         self.cursor = self.connection.cursor()
@@ -128,7 +139,6 @@ class DatabaseManager:
             name = property["name"]
             value = property["value"]
 
-            # If value is None, store as NULL in the database
             if value is None:
                 value = None
             elif isinstance(value, (int, float, bool)):
@@ -146,7 +156,6 @@ class DatabaseManager:
 
             existing_property = self.cursor.fetchone()
 
-            # Insert the meta_property if it does not exist already
             if not existing_property:
                 self.cursor.execute(
                     """
@@ -183,7 +192,6 @@ class DatabaseManager:
             """,
             (sentence_id,),
         )
-        # Fetch all rows and return them as a list of dictionaries
         return {row["name"]: row["tier"] for row in self.cursor.fetchall()}
 
     def _fetch_sent_dict(
@@ -251,17 +259,26 @@ class DatabaseManager:
         include_meta_properties: bool = True,
     ) -> dict[str, Any]:
         """
-        Retrieves sentences based on any combination of filters: named_subfolder, file_path, text_category, and meta_property.
+        Retrieves sentences based on any combination of filters: named_subfolder,
+            file_path, text_category, and meta_property.
         Args:
-            named_subfolder (list[str] | str, optional): Filter by subfolder(s). Defaults to None.
-            file_path (list[Path] | Path, optional): Filter by file path(s). Defaults to None.
-            text_category (list[str] | str, optional): Filter by text category(ies). Defaults to None.
-            meta_property (dict[str, Any], optional): Filter by meta property (e.g., label_name, name, value). Defaults to None.
-            include_embeddings (bool, optional): Whether to include embeddings in the results. Defaults to False.
-            include_meta_properties (bool, optional): Whether to include meta properties in the results. Defaults to True.
+            named_subfolder (list[str] | str, optional): Filter by subfolder(s).
+                Defaults to None.
+            file_path (list[Path] | Path, optional): Filter by file path(s).
+                Defaults to None.
+            text_category (list[str] | str, optional): Filter by text
+                category(ies). Defaults to None.
+            meta_property (dict[str, Any], optional): Filter by meta property
+                (e.g., label_name, name, value). Defaults to None.
+            include_embeddings (bool, optional): Whether to include embeddings
+                 in the results. Defaults to False.
+            include_meta_properties (bool, optional): Whether to include meta
+                properties in the results. Defaults to True.
 
         Returns:
-            dict[str, Any]: A dictionary containing 'sent_dicts' (list of sentences) and 'meta_properties' (if requested).
+            dict[str, Any]: A dictionary containing 'sent_dicts' (list of
+            sentences with file_path and embeddings) and 'meta_properties' (if
+            requested).
         """
         # Build query and parameters
         query = """
@@ -649,13 +666,17 @@ class DatabaseManager:
         return results
 
     def add_embeddings(self, embeddings: list[np.ndarray]) -> None:
-        """Replaces all existing embeddings with the provided list of new embeddings.
+        """
+        Replaces all existing embeddings with the provided list of new
+            embeddings.
 
         Args:
-            embeddings (list of np.ndarray): The new embeddings to replace the current ones in the database.
+            embeddings (list of np.ndarray): The new embeddings to replace
+                the current ones in the database.
 
         Raises:
-            ValueError: If the number of embeddings does not match the number of sentences in the database.
+            ValueError: If the number of embeddings does not match the number
+                of sentences in the database.
         """
         # Ensure that the number of embeddings matches the number of sentences in the database
         self.cursor.execute("SELECT COUNT(*) FROM sentences")

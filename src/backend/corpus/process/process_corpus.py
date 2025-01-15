@@ -69,9 +69,9 @@ class CorpusProcessor:
 
         self.get_text_categories()
         self.get_word_count_and_meta_prop_info(frontend_connect=frontend_connect)
-        # self.db.close()
 
     def process_file(self, file_path: Path) -> None:
+        """.cha files handled separately."""
         file_type = file_path.suffix
 
         if file_type == ".cha":

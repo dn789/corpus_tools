@@ -9,33 +9,40 @@ from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 
 def plot_graph(
-    plot_values, plot_type="line", title="Plot", x_label="X-axis", y_label="count"
+    plot_values: list[tuple],
+    plot_type="line",
+    title="Plot",
+    x_label="X-axis",
+    y_label="count",
 ):
-    """
-    Function to plot either a line or bar graph based on (x, y) tuples with customizable title and axis labels.
-    The plot is returned as an image in memory.
+    """Returns a PIL image of either a line or bar graph based on (x, y) tuples.
 
-    Parameters:
-    - data (list of tuples): A list of (x, y) tuples where x and y are numeric values.
-    - plot_type (str): The type of plot to create, either 'line' or 'bar'. Default is 'line'.
-    - title (str): The title of the plot. Default is 'Plot'.
-    - x_label (str): The label for the x-axis. Default is 'X-axis'.
-    - y_label (str): The label for the y-axis. Default is 'Y-axis'.
+
+    Args:
+        plot_values (list[tuple]): A list of (x, y) tuples where x and y are
+            numeric values.
+        plot_type (str, optional)
+        title (str, optional)
+        x_label (str, optional)
+        y_label (str, optional)
+
+    Raises:
+        ValueError: Invalid plot type specified.
 
     Returns:
-    - image (PIL.Image): The plot image in memory as a PIL image object.
+        image (PIL.image)
     """
 
     # Convert the list of tuples into a pandas DataFrame for easier plotting
     df = pd.DataFrame(plot_values, columns=["x", "y"])
 
-    num_x_ticks = len(df["x"])
-    width = max(8, int(num_x_ticks / 1.5))
-    figsize = (
-        width,
-        6,
-    )
-    plt.figure(figsize=figsize)
+    # num_x_ticks = len(df["x"])
+    # width = max(8, int(num_x_ticks / 1.5))
+    # figsize = (
+    #     width,
+    #     6,
+    # )
+    plt.figure(figsize=(10, 8))
     plt.tight_layout()
     # Create the plot based on the plot_type argument
     if plot_type == "line":

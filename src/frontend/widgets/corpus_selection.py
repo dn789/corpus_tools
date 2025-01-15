@@ -1,5 +1,9 @@
-from typing import Any
-from PySide6.QtCore import Signal, qDebug
+"""
+Widget that's used to select subset(s) of the corpus to analyze,
+    filtered by subfolder/text category/meta property values.
+"""
+
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QFrame, QLabel, QVBoxLayout, QWidget
 from backend.corpus.items import LabelType, MetaType
 from frontend.project import ProjectWrapper as Project

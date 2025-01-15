@@ -1,6 +1,8 @@
+"""Misc small widgets. Buttons, checkboxes, etc."""
+
 from pathlib import Path
 from typing import Any, Callable
-from PySide6.QtCore import QAbstractTableModel, QObject, Qt, Signal, qDebug
+from PySide6.QtCore import QAbstractTableModel, QObject, Qt, Signal
 from PySide6.QtGui import QAction, QDoubleValidator, QIntValidator, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -785,7 +787,7 @@ class ExportResultsWidget(QWidget):
                     str(self.results_item.headerData(column, Qt.Orientation.Horizontal))
                 )
             # file.write(",".join(headers) + "\n")
-            file.write(f'{",".join(headers)}\n')
+            file.write(f"{','.join(headers)}\n")
 
             # Write the table data
             for row in range(row_count):
@@ -797,7 +799,7 @@ class ExportResultsWidget(QWidget):
                     )
                     row_data.append(str(item) if item else "")
                 # file.write(",".join(row_data) + "\n")
-                file.write(f'{",".join(row_data)}\n')
+                file.write(f"{','.join(row_data)}\n")
         self.dialog_label.setText("Exported")
         self.dialog_label.setToolTip(f"<i>Results saved to {file_name}<i>")
 

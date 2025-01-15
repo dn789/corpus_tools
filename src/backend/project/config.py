@@ -20,14 +20,27 @@ from frontend.styles.colors import random_color_rgb
 
 
 class CorpusConfig(BaseSettings):
+    """Corpus configuration"""
+
+    # Corpus summary info
     summary: dict[str, Any]
+    # Path to corpus foldere
     corpus_path: Optional[Path] = None
+    # Extensions of files to be included in the analysis
     included_extensions: dict[str, GenericCorpusItem] = Field(default_factory=dict)
+    # Not used for now
     ignored_extensions: set[str] = Field(default_factory=set)
+    # Subfolders to be analyzed individually
     subfolders: dict[Path, Folder] = Field(default_factory=dict)
+    # Document identifiers for text data
     text_labels: dict[str, DocLabel] = Field(default_factory=dict)
+    # Document identifiers for meta data
     meta_labels: dict[str, DocLabel] = Field(default_factory=dict)
+    # Objects representing text categories corresponding to text labels
     text_categories: dict[str, TextCategory] = Field(default_factory=dict)
+    # Objects representing meta properties corresponding to meta labels.
+    # Meta labels in HTML/XML files with attribute values can have multiple
+    # child meta properties.
     meta_properties: dict[str, dict[str, MetaProperty]] = Field(default_factory=dict)
 
     display_ref: ClassVar = {
@@ -137,6 +150,8 @@ class CorpusConfig(BaseSettings):
 
 
 class Config(BaseSettings):
+    """Main config. Mostly just corpus config for now."""
+
     status: dict[str, Any]
     corpus_config: CorpusConfig
 

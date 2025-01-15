@@ -1,4 +1,11 @@
-from pathlib import Path
+"""
+"Search" tab
+
+-Semantic search
+- Will add filtering by corpus properties and regex
+
+"""
+
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -59,17 +66,11 @@ class SearchWidget(QWidget):
         self.model = None
         self.project = project
         self.init_ui()
-        # self.corpus_config = self.project.corpus_config
 
     def init_ui(self):
-        # Create main layout
         self.setContentsMargins(20, 20, 20, 20)
         self.main_layout = QHBoxLayout()
-        # self.corpus_select_widget = CorpusSelectWidget(self.project)
-        # self.corpus_select_widget.selectionUpdated.connect(self.set_selection)
-        # scroll_area = ScrollArea(self.corpus_select_widget)
-        # scroll_area.setFixedWidth(475)
-        # self.main_layout.addWidget(scroll_area)
+
         self.main_search_layout = QVBoxLayout()
         self.main_search_layout.addWidget(LargeHeading("Search"))
         options_layout = QHBoxLayout()
@@ -92,8 +93,7 @@ class SearchWidget(QWidget):
         self.search_layout.addWidget(
             self.search_button, alignment=Qt.AlignmentFlag.AlignVCenter
         )
-        # self.loading_gif = LoadingGif()
-        # self.search_layout.addWidget(self.loading_gif)
+
         self.search_layout.setSpacing(5)
         self.search_layout.addStretch()
 
@@ -140,7 +140,6 @@ class SearchWidget(QWidget):
         super().resizeEvent(event)
 
     def search(self):
-        # self.loading_gif.start()
         self.search_button.setEnabled(False)
         self.query = self.search_bar.text().strip()  # Get the trimmed search text
         if not self.query:  # Only proceed if there is text
@@ -149,7 +148,10 @@ class SearchWidget(QWidget):
             "semantic" if self.semantic_search_checkbox.is_checked() else "keyword"
         )
         self.search_thread = SearchThread(
-            self.query, search_type, self.project, self.model
+            self.query,
+            search_type,
+            self.project,
+            self.model,  # type: ignore
         )
         self.search_thread.searchComplete.connect(self.display_results)
         if not self.model:
@@ -167,14 +169,8 @@ class SearchWidget(QWidget):
             self.results_table.insertRow(i)
             self.results_table.setItem(i, 0, QTableWidgetItem(d["sentence"]))
             self.results_table.setItem(i, 1, QTableWidgetItem(d["file_path"].__str__()))
-        # self.loading_gif.stop()
         self.search_button.setEnabled(True)
         self.search_thread.quit()
-
-    # def set_selection(self, selection: dict[str, list[DisplayItem]]):
-    #     for folder_selection in selection['folder']:
-    #         for text_selection in selection['text']:
-    #         for
 
 
 class SearchDescriptionBox(QTextEdit):

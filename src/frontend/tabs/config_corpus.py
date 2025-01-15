@@ -1,3 +1,14 @@
+"""
+Corpus configuration tab
+
+Main components:
+
+- CorpusConfigView: Displays corpus configuration (selected subfolders, text
+    categories, meta properties, etc.)
+- FolderViewer: Used for displaying and annotating corpus file tree.
+- DocViewer: Used for displaying and annotating individual corpus files.
+"""
+
 from pathlib import Path
 
 from PySide6.QtWidgets import (
@@ -10,7 +21,7 @@ from PySide6.QtWidgets import (
     QTreeWidgetItem,
     QFileDialog,
 )
-from PySide6.QtCore import QThread, Qt, Signal, qDebug
+from PySide6.QtCore import QThread, Qt, Signal
 
 
 from backend.corpus.process.process_doc import file_to_doc

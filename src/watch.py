@@ -1,3 +1,5 @@
+"""Dev script for hot-reloading on save."""
+
 import sys
 import time
 import subprocess

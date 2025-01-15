@@ -4,6 +4,8 @@ from transformers import pipeline, AutoTokenizer, AutoModelForTokenClassificatio
 
 
 class NERModel:
+    """Named entity recognition"""
+
     def __init__(self):
         tokenizer = AutoTokenizer.from_pretrained(
             "xlm-roberta-large-finetuned-conll03-english"

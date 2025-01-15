@@ -1,12 +1,14 @@
 from pathlib import Path
 from typing import Any
-from PySide6.QtCore import Signal, qDebug
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QWidget
 
 from backend.project.project import Project
 
 
 class ProjectWrapper(Project, QWidget):
+    """Wrapper for Project class (for signalling)"""
+
     projectLoaded = Signal()
     projectSaved = Signal()
     configSaved = Signal()

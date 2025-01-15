@@ -1,3 +1,10 @@
+"""
+Uses pylangacq to process .cha files.
+
+Participants become text categories, other properties become meta properties.
+
+"""
+
 from pathlib import Path
 from typing import Any
 

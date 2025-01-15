@@ -3,7 +3,6 @@ from pathlib import Path
 import shutil
 from typing import Any
 
-from PySide6.QtCore import qDebug
 
 from backend.db.db import DatabaseManager
 from backend.corpus.process.process_corpus import CorpusProcessor
@@ -18,6 +17,8 @@ class Paths:
 
 
 class Project:
+    """Class for managing a project in the app."""
+
     def __init__(
         self,
         default_config_path: Path,
@@ -75,6 +76,14 @@ class Project:
         content: CorpusItem | list[CorpusItem] | str | list[str] | Path,  # type: ignore
         remove: bool = False,
     ) -> None:
+        """Add/remove items to CorpusConfig
+
+        Args:
+            prop_name (str): name of CorpusConfig property to be updated
+            content (CorpusItem | list[CorpusItem] | str | list[str] | Path):
+                name/CorpusItem or list of names/CorpusItems
+            remove (bool, default False): Whether to remove the item(s)
+        """
         self.corpus_config.update_corpus_items(prop_name, content, remove)  # type: ignore
 
     def _save_project_as(self, project_folder: Path) -> None:
@@ -99,6 +108,20 @@ class Project:
     def process_corpus(
         self, add_embeddings: bool = True, frontend_connect: Any = None
     ) -> None:
+        """
+        Processes raw corpus data, creating a standardized database
+        of tokenized sentences with associated text categories, meta
+        properties, etc.
+
+        Args:
+            add_embeddings (bool, optional): Whether to add sbert embeddings
+                for sentences. Defaults to True.
+            frontend_connect (Any, optional): Frontend progress display class.
+                Defaults to None.
+
+        Raises:
+            ValueError: If no corpus config is provided.
+        """
         self.load_corpus_processor(new_db=True)
         self.corpus_processor.process_files(
             add_embeddings=add_embeddings, frontend_connect=frontend_connect

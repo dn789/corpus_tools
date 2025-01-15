@@ -1,3 +1,15 @@
+"""
+"Plot" tab
+
+Main components:
+
+- CorpusSelectionWidget: Used to select subset(s) of the corpus filtered
+    by subfolder/text category/meta property values.  Not implemented yet for
+    this tab.
+- PlotWidget: Select X and Y values to plot.
+- Results tab
+"""
+
 from typing import Any, Callable
 from PySide6.QtCore import QThread, Qt, Signal, qDebug
 from PySide6.QtWidgets import (
@@ -76,11 +88,14 @@ class TaskThread(QThread):
                 meta_props = query_result["meta_properties"][  # type: ignore
                     sent_d["file_path"].__str__()
                 ]
+
                 for meta_prop in meta_props:
                     if (
                         meta_prop["label_name"] == label_name
                         and meta_prop["name"] == name
                     ):
+                        if meta_prop["value"] in (552, "552"):
+                            break
                         sent_batches.setdefault(meta_prop["value"], [])
                         sent_batches[meta_prop["value"]].append(sent_d["sentence"])
                         break
@@ -90,7 +105,7 @@ class TaskThread(QThread):
                 "plot_values": plot_values,
                 "x_label": x_label,
                 "y_label": self.plot_d["y_per"],
-                "title": f'{ self.plot_d["y_type"]}: "{self.plot_d["y_func"]}"',
+                "title": f'{self.plot_d["y_type"]}: "{self.plot_d["y_func"]}"',
                 "y_type": self.plot_d["y_type"],
                 "plot_type": self.plot_d["plot_type"],
             }

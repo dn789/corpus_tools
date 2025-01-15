@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QWidget, QTabWidget, QMainWindow
+from PySide6.QtWidgets import QTabWidget, QMainWindow
 
 from frontend.project import ProjectWrapper
 from frontend.tabs.basic_analysis import BasicAnalysisWidget
@@ -54,7 +54,6 @@ class MainTabWidget(QTabWidget):
 
         for tab_name, widget in self.tabs_dict.items():
             self.addTab(widget, tab_name)
-        # self.tabBar().setCurrentIndex(3)
 
     def tab_change(self, index: int) -> None:
         self.tabBar().setCurrentIndex(index)

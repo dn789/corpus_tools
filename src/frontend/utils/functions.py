@@ -1,5 +1,4 @@
 from typing import Any
-from PySide6.QtCore import qDebug
 from PySide6.QtWidgets import QHBoxLayout, QLayout, QVBoxLayout, QWidget
 
 from frontend.styles.colors import random_color_rgb
@@ -27,6 +26,7 @@ def make_corpus_item(prop_name: str, raw_item: Any) -> CorpusItem:
 
 
 def change_style(widget: QWidget, style: str, new_value: Any) -> None:
+    "Convenience functin for changing a single style in a QSS stylesheet."
     stylesheet = widget.styleSheet().split("\n")
     for i, line in enumerate(stylesheet):
         if line.split(":")[0].strip() == style:
@@ -34,14 +34,19 @@ def change_style(widget: QWidget, style: str, new_value: Any) -> None:
     widget.setStyleSheet("\n".join(stylesheet))
 
 
-def prune_object(obj, max_keys):
+def prune_object(obj: dict | list, max_keys):
     """
-    Recursively prunes a nested dictionary/list to a maximum of `max_keys` at each level.
+    Recursively prunes a nested dictionary/list to a maximum of `max_keys` at
+    each level. Used for displaying pruned versions of file and document trees.
 
-    :param obj: The nested dictionary or list object to be pruned.
-    :param max_keys: The maximum number of keys or elements to display at each level.
-    :return: The pruned object.
+    Args:
+        obj (dict | list):  The nested dictionary or list object to be pruned
+        max_keys (_type_): The maximum number of keys or elements to display at each level.
+
+    Returns:
+        dict | list: The pruned object.
     """
+
     if isinstance(obj, dict):
         # If the object is a dictionary, prune it to the max_keys number of keys
         pruned_dict = {}
@@ -61,6 +66,7 @@ def prune_object(obj, max_keys):
 
 
 def get_widgets(layout: QVBoxLayout | QHBoxLayout) -> list[QWidget]:
+    """Convenience function for getting widgets from a layout."""
     widgets = []
     for i in range(layout.count()):
         item = layout.itemAt(i)
